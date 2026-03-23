@@ -1,0 +1,211 @@
+.wpo-gifts-cta {
+  position: relative;
+
+  .gifts-cta__wrap {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 34px;
+    align-items: center;
+
+    // card geral do bloco
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid rgba(118, 126, 98, 0.18);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    position: relative;
+
+    // “brilho” suave do template
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(720px 280px at 12% 18%, rgba(118, 126, 98, 0.08), transparent 62%),
+        radial-gradient(520px 220px at 88% 80%, rgba(118, 126, 98, 0.06), transparent 60%);
+      pointer-events: none;
+    }
+
+    // contorno interno duplo (elegante)
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(118, 126, 98, 0.10);
+      pointer-events: none;
+    }
+  }
+
+  .gifts-cta__content {
+    position: relative;
+    padding: 44px 40px;
+    z-index: 1;
+  }
+
+  .gifts-cta__kicker {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(118, 126, 98, 0.75);
+    margin-bottom: 10px;
+  }
+
+  .gifts-cta__title {
+    margin: 0 0 12px;
+    font-size: 44px;
+    line-height: 1.05;
+
+    span {
+      display: inline-block;
+      font-weight: 400;
+      opacity: 0.85;
+    }
+  }
+
+  .gifts-cta__text {
+    margin: 0;
+    max-width: 52ch;
+    line-height: 1.85;
+    color: rgba(0, 0, 0, 0.72);
+    font-size: 16px;
+  }
+
+  .gifts-cta__actions {
+    margin-top: 22px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    .theme-btn,
+    .theme-btn-s2 {
+      border-radius: 999px;
+      padding: 12px 22px;
+    }
+  }
+
+  .gifts-cta__visual {
+    position: relative;
+    padding: 36px 36px 36px 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gifts-cta__frame {
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    border-radius: 26px;
+    overflow: hidden;
+    border: 1px solid rgba(118, 126, 98, 0.18);
+    box-shadow: 0 22px 56px rgba(0, 0, 0, 0.10);
+    background: #fbfbf7;
+
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transform: scale(1.02);
+    }
+  }
+
+  .gifts-cta__ornament {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0.9;
+
+    &.o1 {
+      width: 140px;
+      height: 140px;
+      left: -26px;
+      top: -26px;
+      border-radius: 999px;
+      background: rgba(118, 126, 98, 0.10);
+      filter: blur(0px);
+    }
+
+    &.o2 {
+      width: 180px;
+      height: 180px;
+      right: -48px;
+      bottom: -48px;
+      border-radius: 999px;
+      background: rgba(118, 126, 98, 0.08);
+    }
+
+    &.o3 {
+      inset: 14px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      box-shadow: inset 0 0 0 7px rgba(255, 255, 255, 0.35);
+    }
+  }
+
+  // medalhão “premium”
+  .gifts-cta__badge {
+    position: absolute;
+    right: 26px;
+    bottom: 18px;
+    width: 62px;
+    height: 62px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gifts-cta__badge-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: rgba(118, 126, 98, 0.10);
+    border: 1px solid rgba(118, 126, 98, 0.18);
+    box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.65), 0 10px 22px rgba(0, 0, 0, 0.08);
+  }
+
+  .gifts-cta__badge-core {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fbfbf7;
+    border: 1px solid rgba(118, 126, 98, 0.18);
+
+    i {
+      font-size: 20px;
+      color: #768062;
+      line-height: 1;
+    }
+  }
+
+  // responsive
+  @media (max-width: 991px) {
+    .gifts-cta__wrap {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .gifts-cta__content {
+      padding: 38px 26px 22px;
+      text-align: left;
+    }
+
+    .gifts-cta__visual {
+      padding: 0 26px 30px;
+      justify-content: flex-start;
+    }
+
+    .gifts-cta__title {
+      font-size: 36px;
+    }
+
+    .gifts-cta__badge {
+      right: 34px;
+      bottom: 24px;
+    }
+  }
+}

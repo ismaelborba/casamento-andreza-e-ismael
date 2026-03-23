@@ -2,9 +2,11 @@
 html {
     font-size: $base-font-size + px;
 }
+
 :root {
-    scroll-behavior: unset;
+    scroll-behavior: smooth;
 }
+
 body {
     font-family: $base-font;
     color:$body-color;

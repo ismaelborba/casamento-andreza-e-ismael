@@ -1,0 +1,179 @@
+@use "./tokens" as *;
+@use "./mixins" as *;
+
+.admin-card {
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: rgba(255,255,255,.04);
+  box-shadow: $shadow-soft;
+  overflow: hidden;
+}
+
+.admin-card-header {
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+
+  .title { font-weight: 900; font-size: 14px; }
+  .desc { margin-top: 6px; color: $text-muted; font-size: 13px; }
+}
+
+.admin-card-content {
+  padding: 18px;
+}
+
+.admin-grid-2 {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 420px 1fr;
+}
+
+@media (max-width: 1024px) {
+  .admin-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  label {
+    font-size: 12px;
+    color: $text-muted;
+    font-weight: 700;
+  }
+}
+
+.admin-input,
+.admin-textarea {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.35);
+  color: $text;
+  border-radius: 14px;
+  padding: 12px 12px;
+  font-size: 14px;
+  transition: .15s ease;
+
+  &::placeholder { color: rgba(255,255,255,.35); }
+  &:focus { @include focus-ring; }
+}
+
+.admin-textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.admin-row-2 {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 640px) {
+  .admin-row-2 { grid-template-columns: 1fr; }
+}
+
+.admin-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.25);
+  padding: 14px 14px;
+
+  .left {
+    .t { font-weight: 800; font-size: 13px; }
+    .s { margin-top: 4px; color: $text-muted; font-size: 12px; }
+  }
+
+  .pill {
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color: $text;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+
+    &:hover { background: rgba(255,255,255,.10); }
+  }
+}
+
+.admin-btn {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+  color: $text;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: .15s ease;
+  box-shadow: $shadow-soft;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: $shadow;
+  }
+
+  &:active { transform: translateY(0); }
+}
+
+.admin-btn-secondary {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: $text;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 800;
+  cursor: pointer;
+
+  &:hover { background: rgba(255,255,255,.10); }
+}
+
+.admin-table-wrap {
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  thead {
+    background: rgba(255,255,255,.05);
+    th {
+      text-align: left;
+      padding: 12px 14px;
+      color: $text-muted;
+      font-size: 12px;
+      font-weight: 900;
+    }
+  }
+
+  tbody tr {
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+
+  td {
+    padding: 12px 14px;
+    vertical-align: top;
+  }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: $text-soft;
+  font-size: 12px;
+  font-weight: 800;
+}

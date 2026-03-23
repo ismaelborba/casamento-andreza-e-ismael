@@ -1,0 +1,12 @@
+@mixin glass($bg: rgba(255,255,255,.04)) {
+  background: $bg;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+@mixin focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, .25);
+  border-color: rgba(124, 58, 237, .55);
+}
