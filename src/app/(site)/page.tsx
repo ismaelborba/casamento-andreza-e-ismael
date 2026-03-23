@@ -1,28 +1,30 @@
-import { Footer } from "../../components/layout/Footer";
-import { Header } from "../../components/layout/Header";
-import { Couple } from "../../components/sections/Couple";
-import { Event } from "../../components/sections/Event";
-import { Gallery } from "../../components/sections/Gallery";
-import { Hero } from "../../components/sections/Hero";
-import { RSVP } from "../../components/sections/RSVP";
-import { Story } from "../../components/sections/Story";
+import { Recommendations } from "@/src/components/sections/Recommendations";
+import { Footer } from "@/src/components/layout/Footer";
+import { Header } from "@/src/components/layout/Header";
+import { Couple } from "@/src/components/sections/Couple";
+import { Event } from "@/src/components/sections/Event";
+import { Gallery } from "@/src/components/sections/Gallery";
+import { Hero } from "@/src/components/sections/Hero";
+import { RSVP } from "@/src/components/sections/RSVP";
+import { Story } from "@/src/components/sections/Story";
+import { Gifts } from "@/src/components/sections/Gifts";
 
 export default function Page() {
   return (
-    <>
-      <div className="page-wrapper">
-        <Header />
+    <div id="home" className="page-wrapper page-wrapper--home">
+      <Header />
 
-        <div>
-          <Hero />
-          <Couple />
-          <Story />
-          <Gallery />
-          <RSVP />
-          <Event />
-          <Footer />
-        </div>
+      <div>
+        <Hero />
+        <Couple />
+        <Story />
+        <Gallery />
+        <Recommendations />
+        <Gifts />
+        <RSVP />
+        <Event />
+        <Footer />
       </div>
-    </>
+    </div>
   );
 }

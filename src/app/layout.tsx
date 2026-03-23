@@ -1,11 +1,12 @@
 import "../../public/assets/css/animate.css";
+import "./globals.css";
 
 import type { Metadata } from "next";
 import { TemplateScripts } from "../components/TemplateScripts";
 
 export const metadata: Metadata = {
-  title: "Habibi - Wedding & Wedding Planner HTML5 Template",
-  icons: [{ rel: "icon", url: "/assets/images/favicon.png" }],
+  title: "Andreza & Ismael - 3 de Maio de 2026",
+  icons: [{ rel: "icon", url: "/assets/images/logo-sem-fundo.png" }],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

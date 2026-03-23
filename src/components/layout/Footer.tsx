@@ -1,109 +1,46 @@
+"use client";
+
+import Link from "next/link";
+
 export function Footer() {
-    return (
-        <footer className="wpo-site-footer-s2">
-            <div className="wpo-upper-footer">
-                <div className="container">
-                    <div className="row align-items-center">
-                        <div className="col col-xl-3  col-lg-4 col-md-6 col-sm-12 col-12">
-                            <div className="widget link-widget">
-                                <div className="widget-title">
-                                    <h3>Links</h3>
-                                </div>
+  return (
+    <footer className="site-footer">
+      <div className="site-footer-shell">
+        <div className="site-footer-main">
+          <div className="site-footer-brand">
+            <span className="site-footer-kicker">Casamento</span>
+            <h2>Andreza & Ismael</h2>
+            <p>
+              Estamos preparando esse dia com muito carinho e vamos amar celebrar com quem faz
+              parte da nossa história.
+            </p>
+          </div>
 
-                                <div className="link-wrap">
-                                    <ul>
-                                        <li>
-                                            <a href="about.html">About</a>
-                                        </li>
-                                        <li>
-                                            <a href="service.html">Services</a>
-                                        </li>
-                                        <li>
-                                            <a href="rsvp.html">RSVP</a>
-                                        </li>
-                                    </ul>
-                                    <ul>
-                                        <li>
-                                            <a href="gallery.html">Gallery</a>
-                                        </li>
-                                        <li>
-                                            <a href="index.html">Get Quote</a>
-                                        </li>
-                                        <li>
-                                            <a href="contact.html">Contact</a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="col col-xl-6 col-lg-4 col-md-6 col-sm-12 col-12">
-                            <div className="widget about-widget">
-                                <div className="logo widget-title">
-                                    <a className="logo" href="index.html">
-                                        Habibi
-                                    </a>
-                                </div>
-                                <p>We can’t wait to see all of our beloved friends and relative s at our wedding.</p>
-
-                                <ul>
-                                    <li>
-                                        <a href="#">
-                                            <i className="ti-facebook"></i>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="#">
-                                            <i className="ti-twitter-alt"></i>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="#">
-                                            <i className="ti-instagram"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div className="col col-xl-3  col-lg-4 col-md-6 col-sm-12 col-12">
-                            <div className="widget wpo-service-link-widget">
-                                <div className="widget-title">
-                                    <h3>Contact </h3>
-                                </div>
-                                <div className="contact-ft">
-                                    <p>Habibi@wpoceans.com</p>
-                                    <p>
-                                        4517 Washington Ave. Manchester,
-                                        <br />
-                                        Kentucky 39495
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+          <div className="site-footer-links">
+            <h3>Links</h3>
+            <div className="site-footer-link-list">
+              <Link href="/#home">Início</Link>
+              <Link href="/#couple">Os noivos</Link>
+              <Link href="/#story">História</Link>
+              <Link href="/gifts">Presentes</Link>
             </div>
+          </div>
 
-            <div className="wpo-lower-footer">
-                <div className="container">
-                    <div className="row">
-                        <div className="col col-xs-12">
-                            <p className="copyright">
-                                {" "}
-                                &copy; Copyright {new Date().getFullYear()} | <a href="https://www.pyxisweb.com.br/" target="_blank" referrerPolicy="no-referrer">Agência PyxisWeb</a> | Todos os direitos reservados.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+          <div className="site-footer-contact">
+            <h3>Informações</h3>
+            <div className="site-footer-contact-lines">
+              <p>03 de Maio de 2026</p>
+              <p>Cerimônia às 16h</p>
+              <p>Em breve mais detalhes por aqui</p>
             </div>
+          </div>
+        </div>
 
-            <div className="ft-shape-1">
-                <img src="/assets/images/footer-shape-1.svg" alt="" />
-            </div>
-            <div className="ft-shape-2">
-                <img src="/assets/images/footer-shape-2.svg" alt="" />
-            </div>
-        </footer>
-    )
+        <div className="site-footer-bottom">
+          <span>&copy; {new Date().getFullYear()} Andreza & Ismael</span>
+          <span>03 de Maio de 2026</span>
+        </div>
+      </div>
+    </footer>
+  );
 }

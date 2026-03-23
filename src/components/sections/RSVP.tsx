@@ -1,6 +1,6 @@
 export function RSVP() {
     return (
-        <section className="wpo-contact-section-s2 section-padding">
+        <section className="wpo-contact-section-s2 section-padding" id="rsvp">
             <div className="container-fluid">
                 <div className="row justify-content-center">
                     <div className="col col-xl-4 col-lg-6 col-md-6 col-12">

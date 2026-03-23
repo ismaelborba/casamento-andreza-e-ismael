@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1772594859090,
+      "tag": "0000_rich_doomsday",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772595035640,
+      "tag": "0001_lame_hemingway",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774237509811,
+      "tag": "0002_talented_justice",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774240834024,
+      "tag": "0003_colossal_sunspot",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774252200000,
+      "tag": "0004_asaas_settings",
+      "breakpoints": true
+    }
+  ]
+}
