@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, X } from "lucide-react";
 import { toast } from "sonner";
 import { centsToBRL } from "@/src/lib/money";
 
@@ -20,19 +20,47 @@ export function showGiftAddedToast({
   const quantityLabel = `${quantity} cota${quantity > 1 ? "s" : ""}`;
   const actionLabel = quantity > 1 ? "foram adicionadas" : "foi adicionada";
 
-  toast(
-    <div className="site-toast-copy">
-      <span className="site-toast-eyebrow">Lista de presentes</span>
-      <strong>{giftName}</strong>
-    </div>,
+  toast.custom(
+    (toastId) => (
+      <div className="site-toast-card">
+        <button
+          type="button"
+          className="site-toast-dismiss"
+          aria-label="Fechar aviso"
+          onClick={() => toast.dismiss(toastId)}
+        >
+          <X size={14} />
+        </button>
+
+        <div className="site-toast-card-main">
+          <span className="site-toast-card-icon" aria-hidden="true">
+            <ShoppingBag size={14} strokeWidth={2.2} />
+          </span>
+
+          <div className="site-toast-card-copy">
+            <span className="site-toast-card-eyebrow">Lista de presentes</span>
+            <strong title={giftName}>{giftName}</strong>
+            <p>
+              {quantityLabel} {actionLabel} ao carrinho.
+            </p>
+            <p>Subtotal: {centsToBRL(subtotalCents)}</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="site-toast-card-action"
+          onClick={() => {
+            toast.dismiss(toastId);
+            onViewCart();
+          }}
+        >
+          Ver carrinho
+        </button>
+      </div>
+    ),
     {
-      description: `${quantityLabel} ${actionLabel} ao carrinho. Subtotal desta selecao: ${centsToBRL(subtotalCents)}.`,
-      icon: <ShoppingBag size={16} strokeWidth={2.2} />,
       duration: 5000,
-      action: {
-        label: "Ver carrinho",
-        onClick: onViewCart,
-      },
     },
   );
 }

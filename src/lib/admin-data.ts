@@ -1,11 +1,11 @@
 import "server-only";
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/src/db";
 import { buyers, gifts, orders, payments, rsvps } from "@/src/db/schema";
 import { getAsaasSettingsStatus } from "@/src/lib/asaas-config";
 import { parseAsaasError, type AsaasRenderedError } from "@/src/lib/asaas-errors";
-import { getAsaasBalance, getPaymentStatistics, listPayments } from "@/src/lib/asaasFinance";
+import { getAsaasBalance, getPaymentStatistics } from "@/src/lib/asaasFinance";
 
 function normalizeFinanceStats(payload: unknown) {
   const source = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
@@ -29,6 +29,12 @@ function normalizeFinanceStats(payload: unknown) {
 }
 
 function normalizePaymentStatus(status?: string | null) {
+  if (status === "paid") return "Pago";
+  if (status === "pending") return "Pendente";
+  if (status === "failed") return "Falhou";
+  if (status === "canceled") return "Cancelado";
+  if (status === "refunded") return "Estornado";
+  if (status === "expired") return "Expirado";
   if (status === "RECEIVED") return "Recebido";
   if (status === "CONFIRMED") return "Confirmado";
   if (status === "PENDING") return "Pendente";
@@ -36,6 +42,38 @@ function normalizePaymentStatus(status?: string | null) {
   if (status === "REFUNDED") return "Estornado";
   if (status === "CANCELED") return "Cancelado";
   return status ?? "-";
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function formatDateLabel(date: Date | null | undefined) {
+  if (!date) return "-";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatPaymentMethodLabel(method?: string | null, installmentCount?: number | null) {
+  if (method === "credit_card") {
+    return installmentCount && installmentCount > 1 ? `Cartão ${installmentCount}x` : "Cartão";
+  }
+
+  if (method === "pix") {
+    return "Pix";
+  }
+
+  if (method === "boleto") {
+    return "Boleto";
+  }
+
+  return method ?? "-";
 }
 
 export async function getPublicGifts() {
@@ -132,19 +170,36 @@ export async function getAdminRsvps() {
 
 export async function getAdminFinance() {
   const config = await getAsaasSettingsStatus();
+  const now = new Date();
   const result: {
     config: Awaited<ReturnType<typeof getAsaasSettingsStatus>>;
     balance: Awaited<ReturnType<typeof getAsaasBalance>> | null;
     received: ReturnType<typeof normalizeFinanceStats> | null;
     pending: ReturnType<typeof normalizeFinanceStats> | null;
+    card: {
+      quantity: number;
+      grossValue: number;
+      feeValue: number;
+      netValue: number;
+      averageNetValue: number;
+      awaitingReleaseValue: number;
+      releasedEstimatedValue: number;
+      nextReleaseDateLabel: string | null;
+    } | null;
     lastPayments: Array<{
       id: string;
+      method: string;
+      methodLabel: string;
       status: string;
       statusLabel: string;
       value: number;
+      netValue: number;
+      feeValue: number;
       dateLabel: string;
+      releaseDateLabel: string;
       externalReference: string;
       payerName: string;
+      detailsLabel: string;
     }>;
     errors: AsaasRenderedError[];
   } = {
@@ -152,6 +207,7 @@ export async function getAdminFinance() {
     balance: null,
     received: null,
     pending: null,
+    card: null,
     lastPayments: [],
     errors: [],
   };
@@ -183,22 +239,103 @@ export async function getAdminFinance() {
   }
 
   try {
-    const paymentResponse = await listPayments({
-      status: "RECEIVED",
-      billingType: "PIX",
-      limit: 10,
+    const paidCardPayments = await db
+      .select({
+        amountCents: payments.amountCents,
+        feeAmountCents: payments.feeAmountCents,
+        createdAt: payments.createdAt,
+      })
+      .from(payments)
+      .where(and(eq(payments.method, "credit_card"), eq(payments.status, "paid")))
+      .orderBy(desc(payments.createdAt));
+
+    const cardRows = paidCardPayments.map((payment) => {
+      const grossValue = payment.amountCents / 100;
+      const feeValue = payment.feeAmountCents / 100;
+      const netValue = Math.max(0, grossValue - feeValue);
+      const releaseDate = addDays(payment.createdAt, 32);
+
+      return {
+        grossValue,
+        feeValue,
+        netValue,
+        releaseDate,
+      };
     });
-    result.lastPayments = (paymentResponse.data ?? []).map((payment: any) => ({
-      id: String(payment.id ?? "-"),
-      status: String(payment.status ?? "-"),
-      statusLabel: normalizePaymentStatus(payment.status),
-      value: Number(payment.value ?? 0) || 0,
-      dateLabel: String(payment.dateCreated ?? payment.paymentDate ?? "-"),
-      externalReference: String(payment.externalReference ?? "-"),
-      payerName: String(payment.customer ?? payment.name ?? "Pagamento Asaas"),
-    }));
+
+    const nextReleaseDate =
+      cardRows
+        .filter((row) => row.releaseDate > now)
+        .sort((left, right) => left.releaseDate.getTime() - right.releaseDate.getTime())[0]
+        ?.releaseDate ?? null;
+
+    result.card = {
+      quantity: cardRows.length,
+      grossValue: cardRows.reduce((sum, row) => sum + row.grossValue, 0),
+      feeValue: cardRows.reduce((sum, row) => sum + row.feeValue, 0),
+      netValue: cardRows.reduce((sum, row) => sum + row.netValue, 0),
+      averageNetValue:
+        cardRows.length > 0
+          ? cardRows.reduce((sum, row) => sum + row.netValue, 0) / cardRows.length
+          : 0,
+      awaitingReleaseValue: cardRows
+        .filter((row) => row.releaseDate > now)
+        .reduce((sum, row) => sum + row.netValue, 0),
+      releasedEstimatedValue: cardRows
+        .filter((row) => row.releaseDate <= now)
+        .reduce((sum, row) => sum + row.netValue, 0),
+      nextReleaseDateLabel: nextReleaseDate ? formatDateLabel(nextReleaseDate) : null,
+    };
+
+    const recentPayments = await db
+      .select({
+        id: payments.asaasPaymentId,
+        method: payments.method,
+        status: payments.status,
+        amountCents: payments.amountCents,
+        feeAmountCents: payments.feeAmountCents,
+        installmentCount: payments.installmentCount,
+        cardBrand: payments.cardBrand,
+        cardLast4: payments.cardLast4,
+        createdAt: payments.createdAt,
+        orderId: orders.id,
+        payerName: buyers.name,
+      })
+      .from(payments)
+      .innerJoin(orders, eq(payments.orderId, orders.id))
+      .innerJoin(buyers, eq(orders.buyerId, buyers.id))
+      .orderBy(desc(payments.createdAt))
+      .limit(12);
+
+    result.lastPayments = recentPayments.map((payment) => {
+      const grossValue = payment.amountCents / 100;
+      const feeValue = payment.feeAmountCents / 100;
+      const netValue = Math.max(0, grossValue - feeValue);
+      const releaseDate =
+        payment.method === "credit_card" ? addDays(payment.createdAt, 32) : null;
+
+      return {
+        id: payment.id,
+        method: payment.method,
+        methodLabel: formatPaymentMethodLabel(payment.method, payment.installmentCount),
+        status: payment.status,
+        statusLabel: normalizePaymentStatus(payment.status),
+        value: grossValue,
+        netValue,
+        feeValue,
+        dateLabel: formatDateLabel(payment.createdAt),
+        releaseDateLabel:
+          payment.method === "credit_card" ? formatDateLabel(releaseDate) : "Imediata",
+        externalReference: `order_${payment.orderId}`,
+        payerName: payment.payerName,
+        detailsLabel:
+          payment.method === "credit_card"
+            ? `${payment.cardBrand ?? "Cartão"}${payment.cardLast4 ? ` final ${payment.cardLast4}` : ""}`
+            : payment.id,
+      };
+    });
   } catch (cause) {
-    result.errors.push(parseAsaasError(cause, "Erro ao listar pagamentos."));
+    result.errors.push(parseAsaasError(cause, "Erro ao consolidar pagamentos."));
   }
 
   result.errors = result.errors.filter(
