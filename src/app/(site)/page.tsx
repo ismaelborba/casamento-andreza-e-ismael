@@ -17,11 +17,9 @@ export default function Page() {
       <div>
         <Hero />
         <Couple />
-        <Story />
         <Gallery />
         <Recommendations />
         <Gifts />
-        <RSVP />
         <Event />
         <Footer />
       </div>
