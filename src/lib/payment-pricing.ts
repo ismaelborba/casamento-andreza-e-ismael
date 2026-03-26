@@ -2,7 +2,8 @@ const DEFAULT_CARD_FLAT_FEE_CENTS = 49;
 const DEFAULT_CARD_RATE_2_TO_6 = 0.0349;
 const DEFAULT_CARD_RATE_7_TO_12 = 0.0399;
 const DEFAULT_CARD_RATE_13_TO_21 = 0.0429;
-const DEFAULT_CARD_SAFE_MIN_INSTALLMENT_AMOUNT_CENTS = 1000;
+const DEFAULT_CARD_SAFE_MIN_INSTALLMENT_AMOUNT_CENTS = 5000;
+const DEFAULT_CARD_MAX_INSTALLMENTS = 6;
 
 function numberFromEnv(name: string, fallback: number) {
   const raw = process.env[name];
@@ -47,6 +48,13 @@ export function creditCardSafeMinimumInstallmentAmountCents() {
   );
 }
 
+export function creditCardMaximumInstallments() {
+  return Math.max(
+    1,
+    Math.round(numberFromEnv("ASAAS_CARD_MAX_INSTALLMENTS", DEFAULT_CARD_MAX_INSTALLMENTS)),
+  );
+}
+
 export function calculateCreditCardCharge(baseAmountCents: number, installmentCount: number) {
   const normalizedBase = Math.max(0, Math.round(baseAmountCents));
   const normalizedInstallments = Math.max(1, Math.floor(installmentCount));
@@ -82,7 +90,7 @@ export function calculateCreditCardCharge(baseAmountCents: number, installmentCo
 
 export function listAvailableCreditCardInstallments(
   baseAmountCents: number,
-  maxInstallments = 12,
+  maxInstallments = creditCardMaximumInstallments(),
 ) {
   const normalizedMaxInstallments = Math.max(1, Math.floor(maxInstallments));
   const minimumInstallmentAmountCents = creditCardSafeMinimumInstallmentAmountCents();

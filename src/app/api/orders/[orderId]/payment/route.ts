@@ -14,6 +14,7 @@ import {
 import { parseAsaasError } from "@/src/lib/asaas-errors";
 import {
   calculateCreditCardCharge,
+  creditCardMaximumInstallments,
   creditCardSafeMinimumInstallmentAmountCents,
   listAvailableCreditCardInstallments,
 } from "@/src/lib/payment-pricing";
@@ -30,7 +31,7 @@ const pixSchema = z.object({
 
 const creditCardSchema = z.object({
   method: z.literal("credit_card"),
-  installmentCount: z.number().int().min(1).max(12),
+  installmentCount: z.number().int().min(1).max(creditCardMaximumInstallments()),
   card: z.object({
     holderName: z.string().min(3).max(120),
     number: z.string().min(13).max(19),
@@ -113,12 +114,12 @@ export async function POST(req: Request, { params }: RouteContext) {
 
     const order = (await db.select().from(orders).where(eq(orders.id, orderId)).limit(1))[0];
     if (!order) {
-      return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+      return NextResponse.json({ error: "Pedido nao encontrado." }, { status: 404 });
     }
 
     const buyer = (await db.select().from(buyers).where(eq(buyers.id, order.buyerId)).limit(1))[0];
     if (!buyer) {
-      return NextResponse.json({ error: "Comprador não encontrado." }, { status: 404 });
+      return NextResponse.json({ error: "Comprador nao encontrado." }, { status: 404 });
     }
 
     const items = await db
@@ -138,7 +139,7 @@ export async function POST(req: Request, { params }: RouteContext) {
     }
 
     if (order.status === "paid") {
-      return NextResponse.json({ error: "Este pedido já foi pago." }, { status: 409 });
+      return NextResponse.json({ error: "Este pedido ja foi pago." }, { status: 409 });
     }
 
     const existingPayment = (
@@ -147,7 +148,7 @@ export async function POST(req: Request, { params }: RouteContext) {
 
     if (existingPayment?.status === "paid") {
       return NextResponse.json(
-        { error: "Este pedido já possui um pagamento confirmado." },
+        { error: "Este pedido ja possui um pagamento confirmado." },
         { status: 409 },
       );
     }
@@ -232,13 +233,17 @@ export async function POST(req: Request, { params }: RouteContext) {
 
     if (!selectedInstallment) {
       const minimumInstallmentAmount = creditCardSafeMinimumInstallmentAmountCents() / 100;
+      const maximumInstallments = creditCardMaximumInstallments();
 
       return NextResponse.json(
         {
           error:
             allowedInstallments.length === 0
-              ? `Este pedido nÃ£o pode ser pago no cartÃ£o porque cada parcela precisa ter pelo menos R$ ${minimumInstallmentAmount.toFixed(2).replace(".", ",")}.`
-              : `Para este pedido, o cartÃ£o permite no mÃ¡ximo ${allowedInstallments[allowedInstallments.length - 1]?.installmentCount ?? 1}x para manter cada parcela acima de R$ ${minimumInstallmentAmount.toFixed(2).replace(".", ",")}.`,
+              ? `Este pedido nao pode ser pago no cartao porque cada parcela precisa ter pelo menos R$ ${minimumInstallmentAmount.toFixed(2).replace(".", ",")}.`
+              : `Para este pedido, o cartao permite no maximo ${Math.min(
+                  maximumInstallments,
+                  allowedInstallments[allowedInstallments.length - 1]?.installmentCount ?? 1,
+                )}x para manter cada parcela acima de R$ ${minimumInstallmentAmount.toFixed(2).replace(".", ",")}.`,
         },
         { status: 400 },
       );
@@ -325,7 +330,7 @@ export async function POST(req: Request, { params }: RouteContext) {
     const message =
       cause instanceof Error
         ? parseAsaasError(cause.message).description
-        : "Não foi possível criar a cobrança.";
+        : "Nao foi possivel criar a cobranca.";
 
     return NextResponse.json({ error: message }, { status: 400 });
   }
