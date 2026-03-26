@@ -123,7 +123,7 @@ export function GiftCard({ gift, highlighted, inCart, onAddToCart }: Props) {
 
             <div className="gift-card-actions">
               <button
-                className="gift-button gift-card-primary-button"
+                className="gift-card-secondary-link"
                 type="button"
                 onClick={() => onAddToCart(gift, quantity)}
                 disabled={available <= 0}
@@ -133,7 +133,7 @@ export function GiftCard({ gift, highlighted, inCart, onAddToCart }: Props) {
 
               <Link
                 href={`/gifts/${gift.id}`}
-                className="gift-card-secondary-link"
+                className="gift-button gift-card-primary-button"
                 style={{ textDecoration: "none" }}
               >
                 Ver detalhes
@@ -142,7 +142,7 @@ export function GiftCard({ gift, highlighted, inCart, onAddToCart }: Props) {
           </div>
 
           <div className="gift-card-subtotal">
-            <span>Subtotal desta selecao</span>
+            <span>Subtotal desta seleção</span>
             <strong>{centsToBRL(quantity * gift.priceCents)}</strong>
           </div>
         </div>

@@ -135,11 +135,11 @@ export function HeaderCart() {
           )}
 
           <div className="site-header-cart-actions">
-            <Link href="/gifts/cart" className="site-header-cart-primary" onClick={() => setOpen(false)}>
-              Ver carrinho
-            </Link>
-            <Link href="/gifts" className="site-header-cart-secondary" onClick={() => setOpen(false)}>
+            <Link href="/gifts" className="site-header-cart-primary" onClick={() => setOpen(false)}>
               Escolher presentes
+            </Link>
+            <Link href="/gifts/cart" className="site-header-cart-secondary" onClick={() => setOpen(false)}>
+              Ver carrinho
             </Link>
           </div>
         </div>

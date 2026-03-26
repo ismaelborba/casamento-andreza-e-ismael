@@ -14,7 +14,7 @@
   --admin-green: var(--ds-ink);
   --admin-red: var(--ds-ink-deep);
   --admin-gold: var(--ds-stone);
-  --gift-ink: var(--ds-ink-deep);
+  --gift-ink: #101010;
   --gift-muted: rgba(31, 31, 31, 0.72);
   --gift-surface: var(--ds-surface);
   --gift-card: rgba(239, 236, 232, 0.78);

@@ -49,7 +49,10 @@ export async function updateCustomer(
   const res = await fetch(`${config.baseUrl}/customers/${customerId}`, {
     method: "PUT",
     headers: config.headers,
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      notificationDisabled: true,
+    }),
     cache: "no-store",
   });
   if (!res.ok) throw new Error(await res.text());
