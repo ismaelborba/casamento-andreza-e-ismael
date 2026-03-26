@@ -9,10 +9,8 @@ import { HeaderCart } from "@/src/components/layout/HeaderCart";
 const NAV_ITEMS = [
   { id: "home", label: "Início" },
   { id: "couple", label: "Os noivos" },
-  { id: "story", label: "História" },
   { id: "recommendations", label: "Recomendações" },
   { id: "gifts", label: "Presentes" },
-  { id: "rsvp", label: "RSVP" },
   { id: "event", label: "Localização" },
 ] as const;
 

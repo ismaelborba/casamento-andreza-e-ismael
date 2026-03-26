@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
 import { GiftCard } from "@/src/components/sections/gifts/GiftCard";
+import { showGiftAddedToast } from "@/src/components/sections/gifts/cart-toast";
 import { useGiftCart } from "@/src/components/sections/gifts/cart-store";
 import type { Gift } from "@/src/components/sections/gifts/shop-types";
 import { availableQty } from "@/src/components/sections/gifts/shop-types";
@@ -15,8 +17,8 @@ type Props = {
 };
 
 export function GiftProductClient({ gift, gifts }: Props) {
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
-  const [feedback, setFeedback] = useState<string | null>(null);
   const { addToCart, isInCart, totals } = useGiftCart(gifts);
 
   const available = availableQty(gift);
@@ -31,7 +33,11 @@ export function GiftProductClient({ gift, gifts }: Props) {
   );
 
   useEffect(() => {
-    setQuantity((current) => Math.min(Math.max(1, current), Math.max(1, available)));
+    const frame = window.requestAnimationFrame(() => {
+      setQuantity((current) => Math.min(Math.max(1, current), Math.max(1, available)));
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [available]);
 
   return (
@@ -45,8 +51,6 @@ export function GiftProductClient({ gift, gifts }: Props) {
         <span>/</span>
         <strong>{gift.name}</strong>
       </nav>
-
-      {feedback ? <p className="gift-form-success">{feedback}</p> : null}
 
       <section className="gift-product-layout">
         <div className="gift-product-media-panel">
@@ -127,8 +131,12 @@ export function GiftProductClient({ gift, gifts }: Props) {
                 disabled={available <= 0}
                 onClick={() => {
                   addToCart(gift.id, quantity);
-                  setFeedback(`"${gift.name}" foi adicionado ao carrinho.`);
-                  window.setTimeout(() => setFeedback(null), 2400);
+                  showGiftAddedToast({
+                    giftName: gift.name,
+                    quantity,
+                    subtotalCents: gift.priceCents * quantity,
+                    onViewCart: () => router.push("/gifts/cart"),
+                  });
                 }}
               >
                 {available <= 0 ? "Presente esgotado" : "Adicionar ao carrinho"}
@@ -208,8 +216,12 @@ export function GiftProductClient({ gift, gifts }: Props) {
                 inCart={isInCart(item.id)}
                 onAddToCart={(row, nextQuantity) => {
                   addToCart(row.id, nextQuantity);
-                  setFeedback(`"${row.name}" foi adicionado ao carrinho.`);
-                  window.setTimeout(() => setFeedback(null), 2400);
+                  showGiftAddedToast({
+                    giftName: row.name,
+                    quantity: nextQuantity,
+                    subtotalCents: row.priceCents * nextQuantity,
+                    onViewCart: () => router.push("/gifts/cart"),
+                  });
                 }}
               />
             ))}

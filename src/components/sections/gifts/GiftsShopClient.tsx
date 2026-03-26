@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { GiftCard } from "@/src/components/sections/gifts/GiftCard";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
+import { showGiftAddedToast } from "@/src/components/sections/gifts/cart-toast";
 import {
   GiftsSidebar,
   type PriceRangeValue,
@@ -19,12 +20,12 @@ type Props = {
 };
 
 export function GiftsShopClient({ gifts, initialGiftId }: Props) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortValue>("default");
   const [priceRange, setPriceRange] = useState<PriceRangeValue>("all");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const { addToCart, isInCart, totals } = useGiftCart(gifts);
+  const { addToCart, isInCart } = useGiftCart(gifts);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -72,8 +73,6 @@ export function GiftsShopClient({ gifts, initialGiftId }: Props) {
     <div className="gifts-shell">
       <GiftCheckoutSteps current="catalog" />
 
-      {feedback ? <p className="gift-form-success">{feedback}</p> : null}
-
       <div className="gift-grid">
         <GiftsSidebar
           search={search}
@@ -103,8 +102,12 @@ export function GiftsShopClient({ gifts, initialGiftId }: Props) {
                   inCart={isInCart(gift.id)}
                   onAddToCart={(row, quantity) => {
                     addToCart(row.id, quantity);
-                    setFeedback(`"${row.name}" foi adicionado ao carrinho.`);
-                    window.setTimeout(() => setFeedback(null), 2400);
+                    showGiftAddedToast({
+                      giftName: row.name,
+                      quantity,
+                      subtotalCents: row.priceCents * quantity,
+                      onViewCart: () => router.push("/gifts/cart"),
+                    });
                   }}
                 />
               ))}

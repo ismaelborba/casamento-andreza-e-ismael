@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Header } from "@/src/components/layout/Header";
 import { Footer } from "@/src/components/layout/Footer";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
 import { centsToBRL } from "@/src/lib/money";
-import { calculateCreditCardCharge } from "@/src/lib/payment-pricing";
+import {
+  creditCardSafeMinimumInstallmentAmountCents,
+  listAvailableCreditCardInstallments,
+} from "@/src/lib/payment-pricing";
 
 type OrderResponse = {
   order: {
@@ -109,16 +112,16 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  async function reload() {
+  const reload = useCallback(async () => {
     const response = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
     const json = await response.json().catch(() => null);
     setData(response.ok ? json : null);
     setLoading(false);
-  }
+  }, [orderId]);
 
   useEffect(() => {
     reload();
-  }, [orderId]);
+  }, [reload]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && orderId) {
@@ -139,20 +142,39 @@ export default function CheckoutPage() {
   }, [data?.payment?.installmentCount, data?.payment?.method]);
 
   const paid = data?.order.status === "paid";
+  const safeMinimumInstallmentAmountCents = creditCardSafeMinimumInstallmentAmountCents();
+
+  const installmentOptions = useMemo(() => {
+    if (!data) return [];
+    return listAvailableCreditCardInstallments(data.summary.itemsSubtotalCents);
+  }, [data]);
+
+  const canPayWithCard = installmentOptions.length > 0;
+  const effectiveInstallmentCount = installmentOptions.some(
+    (option) => option.installmentCount === installmentCount,
+  )
+    ? installmentCount
+    : installmentOptions[0]?.installmentCount ?? 1;
 
   const cardPricing = useMemo(() => {
-    if (!data) return null;
-    return calculateCreditCardCharge(data.summary.itemsSubtotalCents, installmentCount);
-  }, [data, installmentCount]);
+    return (
+      installmentOptions.find(
+        (option) => option.installmentCount === effectiveInstallmentCount,
+      ) ?? null
+    );
+  }, [effectiveInstallmentCount, installmentOptions]);
+
+  const effectiveSelectedMethod =
+    selectedMethod === "credit_card" && canPayWithCard ? "credit_card" : "pix";
 
   const selectedTotalCents = useMemo(() => {
     if (!data) return 0;
     if (paid) return data.summary.totalChargeCents;
-    if (selectedMethod === "credit_card" && cardPricing) {
+    if (effectiveSelectedMethod === "credit_card" && cardPricing) {
       return cardPricing.totalAmountCents;
     }
     return data.summary.itemsSubtotalCents;
-  }, [cardPricing, data, paid, selectedMethod]);
+  }, [cardPricing, data, effectiveSelectedMethod, paid]);
 
   async function handleGeneratePix() {
     setSubmitting(true);
@@ -186,7 +208,7 @@ export default function CheckoutPage() {
   }
 
   async function handlePayWithCard() {
-    if (!cardPricing) return;
+    if (!cardPricing || !canPayWithCard) return;
 
     setSubmitting(true);
     setError(null);
@@ -197,7 +219,7 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method: "credit_card",
-          installmentCount,
+          installmentCount: effectiveInstallmentCount,
           card: {
             holderName: cardForm.holderName,
             number: cardForm.number,
@@ -245,6 +267,7 @@ export default function CheckoutPage() {
 
   const cardDisabled =
     submitting ||
+    !canPayWithCard ||
     !cardForm.holderName ||
     !cardForm.number ||
     !cardForm.expiryMonth ||
@@ -316,7 +339,7 @@ export default function CheckoutPage() {
                     <div className="gift-method-switch gift-method-switch-grid">
                       <button
                         type="button"
-                        className={`gift-method-chip ${selectedMethod === "pix" ? "is-active" : ""}`}
+                        className={`gift-method-chip ${effectiveSelectedMethod === "pix" ? "is-active" : ""}`}
                         onClick={() => setSelectedMethod("pix")}
                       >
                         <strong>Pix</strong>
@@ -325,15 +348,23 @@ export default function CheckoutPage() {
 
                       <button
                         type="button"
-                        className={`gift-method-chip ${selectedMethod === "credit_card" ? "is-active" : ""}`}
+                        className={`gift-method-chip ${effectiveSelectedMethod === "credit_card" ? "is-active" : ""}`}
                         onClick={() => setSelectedMethod("credit_card")}
+                        disabled={!canPayWithCard}
                       >
                         <strong>Cartão</strong>
                         <span>Parcelamento com taxa já incluída.</span>
                       </button>
                     </div>
 
-                    {selectedMethod === "pix" ? (
+                    {!canPayWithCard ? (
+                      <p className="gift-checkout-note gift-checkout-note-inline">
+                        O cartÃ£o sÃ³ aparece quando cada parcela fica em pelo menos{" "}
+                        {centsToBRL(safeMinimumInstallmentAmountCents)}.
+                      </p>
+                    ) : null}
+
+                    {effectiveSelectedMethod === "pix" ? (
                       <div className="gift-payment-card gift-payment-card-strong">
                         <div className="gift-payment-card-head">
                           <div>
@@ -479,12 +510,16 @@ export default function CheckoutPage() {
                             <select
                               id="installment-count"
                               className="gift-select"
-                              value={installmentCount}
+                              value={effectiveInstallmentCount}
                               onChange={(event) => setInstallmentCount(Number(event.target.value))}
                             >
-                              {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
-                                <option key={value} value={value}>
-                                  {value}x
+                              {installmentOptions.map((option) => (
+                                <option
+                                  key={option.installmentCount}
+                                  value={option.installmentCount}
+                                >
+                                  {option.installmentCount}x de{" "}
+                                  {centsToBRL(option.installmentAmountCents)}
                                 </option>
                               ))}
                             </select>
@@ -504,7 +539,7 @@ export default function CheckoutPage() {
                             <div>
                               <span>Parcela</span>
                               <strong>
-                                {installmentCount}x de{" "}
+                                {effectiveInstallmentCount}x de{" "}
                                 {centsToBRL(cardPricing.installmentAmountCents)}
                               </strong>
                             </div>

@@ -12,7 +12,11 @@ import {
   updateCustomer,
 } from "@/src/lib/asaas";
 import { parseAsaasError } from "@/src/lib/asaas-errors";
-import { calculateCreditCardCharge } from "@/src/lib/payment-pricing";
+import {
+  calculateCreditCardCharge,
+  creditCardSafeMinimumInstallmentAmountCents,
+  listAvailableCreditCardInstallments,
+} from "@/src/lib/payment-pricing";
 
 type RouteContext = {
   params: Promise<{ orderId: string }>;
@@ -212,18 +216,39 @@ export async function POST(req: Request, { params }: RouteContext) {
       });
     }
 
+    const creditCardInput = parsed.data;
+
     const asaasCustomerId = await ensureAsaasCustomer({
       currentCustomerId: buyer.asaasCustomerId ?? null,
       buyer,
-      cpfCnpj: parsed.data.holder.cpfCnpj,
-      phone: parsed.data.holder.phone,
+      cpfCnpj: creditCardInput.holder.cpfCnpj,
+      phone: creditCardInput.holder.phone,
     });
 
-    const pricing = calculateCreditCardCharge(subtotalCents, parsed.data.installmentCount);
+    const allowedInstallments = listAvailableCreditCardInstallments(subtotalCents);
+    const selectedInstallment = allowedInstallments.find(
+      (option) => option.installmentCount === creditCardInput.installmentCount,
+    );
+
+    if (!selectedInstallment) {
+      const minimumInstallmentAmount = creditCardSafeMinimumInstallmentAmountCents() / 100;
+
+      return NextResponse.json(
+        {
+          error:
+            allowedInstallments.length === 0
+              ? `Este pedido nÃ£o pode ser pago no cartÃ£o porque cada parcela precisa ter pelo menos R$ ${minimumInstallmentAmount.toFixed(2).replace(".", ",")}.`
+              : `Para este pedido, o cartÃ£o permite no mÃ¡ximo ${allowedInstallments[allowedInstallments.length - 1]?.installmentCount ?? 1}x para manter cada parcela acima de R$ ${minimumInstallmentAmount.toFixed(2).replace(".", ",")}.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const pricing = calculateCreditCardCharge(subtotalCents, selectedInstallment.installmentCount);
     const expiryYear =
-      parsed.data.card.expiryYear.length === 2
-        ? `20${parsed.data.card.expiryYear}`
-        : parsed.data.card.expiryYear;
+      creditCardInput.card.expiryYear.length === 2
+        ? `20${creditCardInput.card.expiryYear}`
+        : creditCardInput.card.expiryYear;
 
     const cardPayment = await createCreditCardPayment({
       customerId: asaasCustomerId,
@@ -235,21 +260,21 @@ export async function POST(req: Request, { params }: RouteContext) {
       dueDate: todayISO(),
       remoteIp: clientIp(req),
       creditCard: {
-        holderName: parsed.data.card.holderName,
-        number: onlyDigits(parsed.data.card.number),
-        expiryMonth: parsed.data.card.expiryMonth,
+        holderName: creditCardInput.card.holderName,
+        number: onlyDigits(creditCardInput.card.number),
+        expiryMonth: creditCardInput.card.expiryMonth,
         expiryYear,
-        ccv: onlyDigits(parsed.data.card.ccv),
+        ccv: onlyDigits(creditCardInput.card.ccv),
       },
       creditCardHolderInfo: {
-        name: parsed.data.card.holderName,
+        name: creditCardInput.card.holderName,
         email: buyer.email,
-        cpfCnpj: onlyDigits(parsed.data.holder.cpfCnpj),
-        postalCode: onlyDigits(parsed.data.holder.postalCode),
-        addressNumber: parsed.data.holder.addressNumber.trim(),
-        addressComplement: parsed.data.holder.addressComplement?.trim() || undefined,
-        phone: onlyDigits(parsed.data.holder.phone),
-        mobilePhone: onlyDigits(parsed.data.holder.phone),
+        cpfCnpj: onlyDigits(creditCardInput.holder.cpfCnpj),
+        postalCode: onlyDigits(creditCardInput.holder.postalCode),
+        addressNumber: creditCardInput.holder.addressNumber.trim(),
+        addressComplement: creditCardInput.holder.addressComplement?.trim() || undefined,
+        phone: onlyDigits(creditCardInput.holder.phone),
+        mobilePhone: onlyDigits(creditCardInput.holder.phone),
       },
     });
 
@@ -265,7 +290,7 @@ export async function POST(req: Request, { params }: RouteContext) {
       cardBrand: cardPayment.creditCard?.creditCardBrand ?? null,
       cardLast4:
         cardPayment.creditCard?.creditCardNumber?.slice(-4) ??
-        onlyDigits(parsed.data.card.number).slice(-4),
+        onlyDigits(creditCardInput.card.number).slice(-4),
       invoiceUrl: cardPayment.invoiceUrl ?? null,
       pixQrCode: null,
       pixPayload: null,

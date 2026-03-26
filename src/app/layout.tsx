@@ -4,6 +4,7 @@ import "./fonts.css";
 
 import type { Metadata } from "next";
 import { TemplateScripts } from "../components/TemplateScripts";
+import { Toaster } from "../components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Andreza & Ismael - 3 de Maio de 2026",
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <body>
         {children}
+        <Toaster />
         <TemplateScripts />
       </body>
     </html>
