@@ -3963,10 +3963,11 @@ a.ui-button:active, .ui-button:active,
 .static-hero-s3 .slide-title h2,
 .static-hero-s5 .slide-title h2,
 .static-hero-s10 .slide-title h2 {
-  color: #101010;
+  color: #FFFFFF;
   text-align: center;
-  font-size: 90px;
-  font-style: normal;
+  font-family: var(--site-script-font);
+  font-size: 52px;
+  font-style: bold;
   font-weight: 400;
   line-height: normal;
   text-transform: capitalize;
@@ -4099,7 +4100,7 @@ a.ui-button:active, .ui-button:active,
 .static-hero-s3 .slide-text p,
 .static-hero-s5 .slide-text p,
 .static-hero-s10 .slide-text p {
-  color: #5C5C5C;
+  color: #FFFFFF;
   margin: 0;
   font-size: 25px;
 }
@@ -4657,7 +4658,7 @@ a.ui-button:active, .ui-button:active,
 }
 
 .static-hero-s2 {
-  background: #F9FBF7;
+  background: #1F1F1F;
 }
 .static-hero-s2 .wpo-static-hero-inner .slide-title-sub {
   text-align: center;
@@ -9105,7 +9106,7 @@ a.ui-button:active, .ui-button:active,
   padding-left: 100px;
   padding-right: 100px;
   position: relative;
-  padding-top: 200px;
+  padding-top: 40px;
 }
 @media (max-width: 1750px) {
   .wpo-couple-section-s2 {

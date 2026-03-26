@@ -1,0 +1,9 @@
+@font-face {
+  font-family: "Romantically";
+  src: url("/assets/fonts/ROMANTICALLY.OTF") format("opentype");
+  font-display: swap;
+}
+
+:root {
+  --site-script-font: "Romantically", "Brush Script MT", cursive;
+}

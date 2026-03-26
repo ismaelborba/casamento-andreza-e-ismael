@@ -1,21 +1,21 @@
 const EVENT_ITEMS = [
   {
-    title: "Cerimônia",
-    time: "03 de Maio de 2026 • início às 16h",
-    address: "Os detalhes de local serão compartilhados com os convidados.",
-    contact: "Chegue com antecedência para aproveitar cada momento.",
+    title: "Cerimonia",
+    time: "03 de Maio de 2026 - inicio as 16h",
+    address: "Os detalhes de local serao compartilhados com os convidados.",
+    contact: "Chegue com antecedencia para aproveitar cada momento.",
   },
   {
-    title: "Recepção",
-    time: "Logo após a cerimônia",
-    address: "A celebração continuará com muita alegria ao lado de quem amamos.",
-    contact: "Em breve, mais informações por aqui.",
+    title: "Recepcao",
+    time: "Logo apos a cerimonia",
+    address: "A celebracao continuara com muita alegria ao lado de quem amamos.",
+    contact: "Em breve, mais informacoes por aqui.",
   },
   {
-    title: "Localização",
-    time: "Mapa e endereço completos",
-    address: "Assim que tudo estiver confirmado, atualizaremos esta seção.",
-    contact: "Enquanto isso, você pode acompanhar novidades pelo site.",
+    title: "Localizacao",
+    time: "Mapa e endereco completos",
+    address: "Assim que tudo estiver confirmado, atualizaremos esta secao.",
+    contact: "Enquanto isso, voce pode acompanhar novidades pelo site.",
   },
 ];
 
@@ -53,7 +53,7 @@ export function Event() {
                         <li>{item.contact}</li>
                         <li>
                           <a className="popup-gmaps" href="/#rsvp">
-                            Ver atualizações
+                            Ver atualizacoes
                           </a>
                         </li>
                       </ul>

@@ -1,5 +1,6 @@
 import "../../public/assets/css/animate.css";
 import "./globals.css";
+import "./fonts.css";
 
 import type { Metadata } from "next";
 import { TemplateScripts } from "../components/TemplateScripts";

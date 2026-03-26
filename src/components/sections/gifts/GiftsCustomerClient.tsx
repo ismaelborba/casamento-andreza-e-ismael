@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { centsToBRL } from "@/src/lib/money";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
 import { useGiftCart } from "@/src/components/sections/gifts/cart-store";
+import { usePublicGiftsCatalog } from "@/src/components/sections/gifts/public-gifts-store";
 import type { Gift } from "@/src/components/sections/gifts/shop-types";
 
 const STORAGE_KEY = "andreza-ismael-gifts-customer";
@@ -54,10 +55,12 @@ function readPendingCheckoutOrderId() {
 
 export function GiftsCustomerClient({ gifts }: { gifts: Gift[] }) {
   const router = useRouter();
-  const { cartItems, hydrated, totals, clearCart } = useGiftCart(gifts);
+  const { gifts: catalog, loading: loadingCatalog } = usePublicGiftsCatalog(gifts);
+  const { cartItems, hydrated, items, totals, clearCart } = useGiftCart(catalog);
   const [form, setForm] = useState<CustomerDraft>(emptyDraft);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const waitingForCatalog = items.length > 0 && cartItems.length === 0 && loadingCatalog;
 
   useEffect(() => {
     setForm(readDraft());
@@ -70,7 +73,7 @@ export function GiftsCustomerClient({ gifts }: { gifts: Gift[] }) {
   }, [form]);
 
   useEffect(() => {
-    if (hydrated && cartItems.length === 0) {
+    if (hydrated && !waitingForCatalog && cartItems.length === 0) {
       const pendingOrderId = readPendingCheckoutOrderId();
 
       if (pendingOrderId) {
@@ -80,7 +83,7 @@ export function GiftsCustomerClient({ gifts }: { gifts: Gift[] }) {
 
       router.replace("/gifts/cart");
     }
-  }, [cartItems.length, hydrated, router]);
+  }, [cartItems.length, hydrated, router, waitingForCatalog]);
 
   async function handleSubmit() {
     if (!cartItems.length) {
@@ -151,7 +154,7 @@ export function GiftsCustomerClient({ gifts }: { gifts: Gift[] }) {
         </div>
       </section>
 
-      {!hydrated ? (
+      {!hydrated || waitingForCatalog ? (
         <div className="gift-loading">Carregando...</div>
       ) : (
         <section className="gift-layout-two gift-customer-layout">
@@ -214,6 +217,7 @@ export function GiftsCustomerClient({ gifts }: { gifts: Gift[] }) {
                       id="customer-message"
                       className="admin-textarea gift-customer-textarea"
                       value={form.buyerMessage}
+                      maxLength={280}
                       onChange={(event) =>
                         setForm((current) => ({ ...current, buyerMessage: event.target.value }))
                       }

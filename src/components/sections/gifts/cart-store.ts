@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CartItem, CartGiftItem, Gift } from "@/src/components/sections/gifts/shop-types";
 import { availableQty } from "@/src/components/sections/gifts/shop-types";
 
-const STORAGE_KEY = "andreza-ismael-gifts-cart";
+export const GIFT_CART_STORAGE_KEY = "andreza-ismael-gifts-cart";
 
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -50,7 +50,7 @@ function readCart() {
     return [];
   }
 
-  return parseStoredCart(window.localStorage.getItem(STORAGE_KEY));
+  return parseStoredCart(window.localStorage.getItem(GIFT_CART_STORAGE_KEY));
 }
 
 function writeCart(items: CartItem[]) {
@@ -63,34 +63,30 @@ function writeCartSilently(items: CartItem[]) {
     return;
   }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  window.localStorage.setItem(GIFT_CART_STORAGE_KEY, JSON.stringify(items));
+}
+
+function normalizeQuantity(quantity: number) {
+  return Math.max(1, Math.floor(quantity) || 1);
 }
 
 function clampQuantity(gifts: Gift[], giftId: string, quantity: number) {
   const gift = gifts.find((entry) => entry.id === giftId);
 
   if (!gift) {
-    return 0;
+    return normalizeQuantity(quantity);
   }
 
-  return Math.max(1, Math.min(Math.floor(quantity), Math.max(1, availableQty(gift))));
+  return Math.max(1, Math.min(normalizeQuantity(quantity), Math.max(1, availableQty(gift))));
 }
 
-export function useGiftCart(gifts: Gift[]) {
+function useStoredGiftCart() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      const nextItems = readCart()
-        .map((item) => {
-          const quantity = clampQuantity(gifts, item.giftId, item.quantity);
-          return quantity > 0 ? { ...item, quantity } : null;
-        })
-        .filter((item): item is CartItem => item !== null);
-
-      setItems(nextItems);
-      writeCartSilently(nextItems);
+      setItems(readCart());
       setHydrated(true);
     };
 
@@ -102,22 +98,52 @@ export function useGiftCart(gifts: Gift[]) {
       window.removeEventListener("storage", sync);
       window.removeEventListener("gift-cart-changed", sync);
     };
-  }, [gifts]);
+  }, []);
+
+  function updateItems(nextItems: CartItem[]) {
+    setItems(nextItems);
+    writeCart(nextItems);
+  }
+
+  function removeFromCart(giftId: string) {
+    updateItems(items.filter((item) => item.giftId !== giftId));
+  }
+
+  function clearCart() {
+    updateItems([]);
+  }
+
+  function isInCart(giftId: string) {
+    return items.some((item) => item.giftId === giftId);
+  }
+
+  return {
+    hydrated,
+    items,
+    updateItems,
+    removeFromCart,
+    clearCart,
+    isInCart,
+  };
+}
+
+export function useGiftCart(gifts: Gift[]) {
+  const { hydrated, items, updateItems, removeFromCart, clearCart, isInCart } = useStoredGiftCart();
 
   const cartItems = useMemo<CartGiftItem[]>(() => {
     return items
       .map((item) => {
         const gift = gifts.find((entry) => entry.id === item.giftId);
 
-        if (!gift) {
-          return null;
-        }
+      if (!gift) {
+        return null;
+      }
 
-        return {
-          gift,
-          quantity: Math.min(item.quantity, Math.max(1, availableQty(gift))),
-        };
-      })
+      return {
+        gift,
+        quantity: clampQuantity(gifts, item.giftId, item.quantity),
+      };
+    })
       .filter((item): item is CartGiftItem => item !== null);
   }, [gifts, items]);
 
@@ -130,18 +156,8 @@ export function useGiftCart(gifts: Gift[]) {
 
     return { quantity, subtotalCents };
   }, [cartItems]);
-
-  function updateItems(nextItems: CartItem[]) {
-    setItems(nextItems);
-    writeCart(nextItems);
-  }
-
   function addToCart(giftId: string, quantity: number) {
     const normalizedQuantity = clampQuantity(gifts, giftId, quantity);
-    if (!normalizedQuantity) {
-      return;
-    }
-
     const existing = items.find((item) => item.giftId === giftId);
 
     if (existing) {
@@ -160,18 +176,6 @@ export function useGiftCart(gifts: Gift[]) {
         item.giftId === giftId ? { ...item, quantity: normalizedQuantity } : item,
       ),
     );
-  }
-
-  function removeFromCart(giftId: string) {
-    updateItems(items.filter((item) => item.giftId !== giftId));
-  }
-
-  function clearCart() {
-    updateItems([]);
-  }
-
-  function isInCart(giftId: string) {
-    return items.some((item) => item.giftId === giftId);
   }
 
   return {

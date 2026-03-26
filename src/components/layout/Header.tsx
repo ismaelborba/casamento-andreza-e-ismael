@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { HeaderCart } from "@/src/components/layout/HeaderCart";
 
 const NAV_ITEMS = [
   { id: "home", label: "Início" },
@@ -79,8 +80,15 @@ export function Header() {
   const router = useRouter();
   const isHome = pathname === "/";
   const ids = useMemo(() => NAV_ITEMS.map((item) => item.id), []);
+  const routeActiveId = useMemo(() => {
+    if (isHome) {
+      return ids[0] ?? "home";
+    }
+
+    return pathname.startsWith("/gifts") || pathname.startsWith("/checkout") ? "gifts" : "";
+  }, [ids, isHome, pathname]);
   const [activeId, setActiveId] = useState(
-    isHome ? ids[0] ?? "home" : pathname.startsWith("/gifts") || pathname.startsWith("/checkout") ? "gifts" : "",
+    routeActiveId,
   );
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -89,30 +97,28 @@ export function Header() {
   const lockTimerRef = useRef<number | null>(null);
 
   const updateActive = useCallback(() => {
-    if (!isHome) {
-      setActiveId(pathname.startsWith("/gifts") || pathname.startsWith("/checkout") ? "gifts" : "");
-      return;
-    }
-
     setActiveId(computeActiveId(ids));
-  }, [ids, isHome, pathname]);
+  }, [ids]);
 
   useEffect(() => {
-    updateActive();
-
     if (!isHome) {
       return;
     }
 
-    const onScroll = () => {
+    const scheduleActiveUpdate = () => {
       if (lockRef.current) return;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(updateActive);
     };
 
+    scheduleActiveUpdate();
+
+    const onScroll = () => {
+      scheduleActiveUpdate();
+    };
+
     const onResize = () => {
-      if (lockRef.current) return;
-      updateActive();
+      scheduleActiveUpdate();
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -127,8 +133,16 @@ export function Header() {
   }, [isHome, updateActive]);
 
   useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+    if (!mobileOpen) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      setMobileOpen(false);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileOpen, pathname]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -210,7 +224,7 @@ export function Header() {
                   href={isHome ? `#${item.id}` : item.id === "home" ? "/" : `/#${item.id}`}
                   scroll={false}
                   onClick={onSectionClick(item.id)}
-                  className={`site-header-link ${activeId === item.id ? "is-active" : ""}`}
+                  className={`site-header-link ${(isHome ? activeId : routeActiveId) === item.id ? "is-active" : ""}`}
                 >
                   {item.label}
                 </Link>
@@ -218,6 +232,7 @@ export function Header() {
             </div>
 
             <div className="site-header-actions">
+              <HeaderCart />
               <Link href="/gifts" className="site-header-cta">
                 Lista de presentes
               </Link>

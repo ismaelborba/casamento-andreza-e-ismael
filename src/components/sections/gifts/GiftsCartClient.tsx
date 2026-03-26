@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { centsToBRL } from "@/src/lib/money";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
 import { useGiftCart } from "@/src/components/sections/gifts/cart-store";
+import { usePublicGiftsCatalog } from "@/src/components/sections/gifts/public-gifts-store";
 import type { Gift } from "@/src/components/sections/gifts/shop-types";
 import { availableQty } from "@/src/components/sections/gifts/shop-types";
 
 export function GiftsCartClient({ gifts }: { gifts: Gift[] }) {
   const router = useRouter();
-  const { cartItems, hydrated, totals, updateQuantity, removeFromCart } = useGiftCart(gifts);
+  const { gifts: catalog, loading: loadingCatalog } = usePublicGiftsCatalog(gifts);
+  const { cartItems, hydrated, items, totals, updateQuantity, removeFromCart } = useGiftCart(catalog);
+  const waitingForCatalog = items.length > 0 && cartItems.length === 0 && loadingCatalog;
 
   return (
     <div className="gifts-shell">
@@ -27,7 +30,7 @@ export function GiftsCartClient({ gifts }: { gifts: Gift[] }) {
         </div>
       </section>
 
-      {!hydrated ? (
+      {!hydrated || waitingForCatalog ? (
         <div className="gift-loading">Carregando carrinho...</div>
       ) : cartItems.length === 0 ? (
         <div className="gift-empty-state">
