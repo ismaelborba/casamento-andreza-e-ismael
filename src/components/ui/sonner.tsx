@@ -6,10 +6,9 @@ export function Toaster() {
   return (
     <Sonner
       closeButton
-      expand
-      visibleToasts={4}
-      position="top-right"
-      offset={{ top: 112, right: 20 }}
+      visibleToasts={3}
+      position="bottom-right"
+      offset={{ bottom: 20, right: 20 }}
       toastOptions={{
         unstyled: true,
         classNames: {

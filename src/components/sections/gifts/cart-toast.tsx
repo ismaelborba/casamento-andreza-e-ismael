@@ -28,7 +28,7 @@ export function showGiftAddedToast({
     {
       description: `${quantityLabel} ${actionLabel} ao carrinho. Subtotal desta selecao: ${centsToBRL(subtotalCents)}.`,
       icon: <ShoppingBag size={16} strokeWidth={2.2} />,
-      duration: 4200,
+      duration: 5000,
       action: {
         label: "Ver carrinho",
         onClick: onViewCart,
