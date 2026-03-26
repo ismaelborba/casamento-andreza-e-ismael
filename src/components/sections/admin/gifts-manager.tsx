@@ -348,7 +348,7 @@ export function AdminGiftsManager({ initialRows }: Props) {
                       onChange={(event) =>
                         setForm((current) => ({ ...current, imageUrl: event.target.value }))
                       }
-                      placeholder="https://... ou /uploads/gifts/..."
+                      placeholder="https://... ou URL publica do bucket"
                     />
                   </div>
 
@@ -359,7 +359,9 @@ export function AdminGiftsManager({ initialRows }: Props) {
                     </div>
                     <div>
                       <UploadCloud size={16} />
-                      <span>O upload vai salvar a imagem direto no projeto para uso em `/gifts`.</span>
+                      <span>
+                        O upload salva a imagem no Cloudflare R2, dentro da pasta <code>casamento/</code>.
+                      </span>
                     </div>
                   </div>
 
