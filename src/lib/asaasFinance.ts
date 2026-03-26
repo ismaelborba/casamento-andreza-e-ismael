@@ -1,5 +1,44 @@
 import { getAsaasRuntimeConfig } from "@/src/lib/asaas-config";
 
+export type AsaasBillingType = "PIX" | "CREDIT_CARD" | "BOLETO";
+export type AsaasPaymentStatus =
+  | "RECEIVED"
+  | "PENDING"
+  | "OVERDUE"
+  | "CONFIRMED"
+  | "REFUNDED"
+  | "CANCELED";
+
+export type AsaasPaymentStatistics = {
+  quantity?: number;
+  value?: number;
+  netValue?: number;
+};
+
+export type AsaasPaymentRecord = {
+  id?: string;
+  customer?: string;
+  billingType?: AsaasBillingType;
+  status?: AsaasPaymentStatus;
+  value?: number;
+  netValue?: number;
+  originalValue?: number;
+  dueDate?: string;
+  originalDueDate?: string;
+  paymentDate?: string;
+  clientPaymentDate?: string;
+  dateCreated?: string;
+  externalReference?: string;
+  description?: string;
+  installmentNumber?: number;
+  invoiceNumber?: string;
+};
+
+export type AsaasPaymentListResponse = {
+  data: AsaasPaymentRecord[];
+  totalCount?: number;
+};
+
 async function requestConfig() {
   const config = await getAsaasRuntimeConfig();
 
@@ -32,7 +71,7 @@ export async function getAsaasBalance() {
 
 export async function getPaymentStatistics(params: {
   status: "RECEIVED" | "PENDING" | "OVERDUE" | "REFUNDED";
-  billingType?: "PIX" | "CREDIT_CARD" | "BOLETO";
+  billingType?: AsaasBillingType;
   externalReference?: string;
   dateCreatedGe?: string; // yyyy-mm-dd
   dateCreatedLe?: string; // yyyy-mm-dd
@@ -51,12 +90,12 @@ export async function getPaymentStatistics(params: {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<any>;
+  return res.json() as Promise<AsaasPaymentStatistics>;
 }
 
 export async function listPayments(params: {
-  status?: "RECEIVED" | "PENDING" | "OVERDUE" | "CONFIRMED" | "REFUNDED" | "CANCELED";
-  billingType?: "PIX" | "CREDIT_CARD" | "BOLETO";
+  status?: AsaasPaymentStatus;
+  billingType?: AsaasBillingType;
   externalReference?: string;
   limit?: number;
   offset?: number;
@@ -75,5 +114,5 @@ export async function listPayments(params: {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ data: any[]; totalCount?: number }>;
+  return res.json() as Promise<AsaasPaymentListResponse>;
 }

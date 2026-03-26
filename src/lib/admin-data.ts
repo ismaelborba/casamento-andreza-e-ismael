@@ -1,11 +1,16 @@
 import "server-only";
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/src/db";
 import { buyers, gifts, orders, payments, rsvps } from "@/src/db/schema";
 import { getAsaasSettingsStatus } from "@/src/lib/asaas-config";
 import { parseAsaasError, type AsaasRenderedError } from "@/src/lib/asaas-errors";
-import { getAsaasBalance, getPaymentStatistics } from "@/src/lib/asaasFinance";
+import {
+  getAsaasBalance,
+  getPaymentStatistics,
+  listPayments,
+  type AsaasPaymentRecord,
+} from "@/src/lib/asaasFinance";
 
 function normalizeFinanceStats(payload: unknown) {
   const source = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
@@ -61,19 +66,61 @@ function formatDateLabel(date: Date | null | undefined) {
 }
 
 function formatPaymentMethodLabel(method?: string | null, installmentCount?: number | null) {
-  if (method === "credit_card") {
+  const normalizedMethod = (method ?? "").toLowerCase();
+
+  if (normalizedMethod === "credit_card") {
     return installmentCount && installmentCount > 1 ? `Cartão ${installmentCount}x` : "Cartão";
   }
 
-  if (method === "pix") {
+  if (normalizedMethod === "pix") {
     return "Pix";
   }
 
-  if (method === "boleto") {
+  if (normalizedMethod === "boleto") {
     return "Boleto";
   }
 
   return method ?? "-";
+}
+
+function parseAsaasDate(value?: string | null) {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.includes(" ") ? trimmed.replace(" ", "T") : trimmed;
+  const parsed = new Date(normalized);
+
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  const fallback = new Date(`${trimmed}T00:00:00`);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function resolveAsaasPaymentValue(value: unknown) {
+  return typeof value === "number" ? value : Number(value ?? 0) || 0;
+}
+
+function estimateCardReleaseDate(payment: AsaasPaymentRecord) {
+  const baseDate =
+    parseAsaasDate(payment.clientPaymentDate) ??
+    parseAsaasDate(payment.paymentDate) ??
+    parseAsaasDate(payment.dueDate) ??
+    parseAsaasDate(payment.originalDueDate) ??
+    parseAsaasDate(payment.dateCreated);
+
+  return baseDate ? addDays(baseDate, 32) : null;
+}
+
+function extractOrderIdFromExternalReference(value?: string | null) {
+  if (!value?.startsWith("order_")) {
+    return null;
+  }
+
+  return value.slice("order_".length) || null;
 }
 
 export async function getPublicGifts() {
@@ -239,33 +286,60 @@ export async function getAdminFinance() {
   }
 
   try {
-    const paidCardPayments = await db
-      .select({
-        amountCents: payments.amountCents,
-        feeAmountCents: payments.feeAmountCents,
-        createdAt: payments.createdAt,
-      })
-      .from(payments)
-      .where(and(eq(payments.method, "credit_card"), eq(payments.status, "paid")))
-      .orderBy(desc(payments.createdAt));
+    const paymentsResponse = await listPayments({ limit: 20 });
+    const asaasPayments = paymentsResponse.data ?? [];
 
-    const cardRows = paidCardPayments.map((payment) => {
-      const grossValue = payment.amountCents / 100;
-      const feeValue = payment.feeAmountCents / 100;
-      const netValue = Math.max(0, grossValue - feeValue);
-      const releaseDate = addDays(payment.createdAt, 32);
+    const orderIds = Array.from(
+      new Set(
+        asaasPayments
+          .map((payment) => extractOrderIdFromExternalReference(payment.externalReference))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
 
-      return {
-        grossValue,
-        feeValue,
-        netValue,
-        releaseDate,
-      };
-    });
+    const relatedOrders =
+      orderIds.length > 0
+        ? await db
+            .select({
+              orderId: orders.id,
+              buyerName: buyers.name,
+            })
+            .from(orders)
+            .innerJoin(buyers, eq(orders.buyerId, buyers.id))
+            .where(inArray(orders.id, orderIds))
+        : [];
+
+    const buyerNameByOrderId = new Map(
+      relatedOrders.map((row) => [row.orderId, row.buyerName]),
+    );
+
+    const cardRows = asaasPayments
+      .filter(
+        (payment) =>
+          payment.billingType === "CREDIT_CARD" &&
+          payment.status !== "CANCELED" &&
+          payment.status !== "REFUNDED",
+      )
+      .map((payment) => {
+        const grossValue = resolveAsaasPaymentValue(payment.value);
+        const netValue = Math.max(0, resolveAsaasPaymentValue(payment.netValue) || grossValue);
+        const feeValue = Math.max(0, grossValue - netValue);
+        const releaseDate = estimateCardReleaseDate(payment);
+
+        return {
+          grossValue,
+          feeValue,
+          netValue,
+          releaseDate,
+        };
+      });
 
     const nextReleaseDate =
       cardRows
-        .filter((row) => row.releaseDate > now)
+        .filter(
+          (row): row is typeof row & { releaseDate: Date } =>
+            row.releaseDate instanceof Date && row.releaseDate > now,
+        )
         .sort((left, right) => left.releaseDate.getTime() - right.releaseDate.getTime())[0]
         ?.releaseDate ?? null;
 
@@ -279,61 +353,76 @@ export async function getAdminFinance() {
           ? cardRows.reduce((sum, row) => sum + row.netValue, 0) / cardRows.length
           : 0,
       awaitingReleaseValue: cardRows
-        .filter((row) => row.releaseDate > now)
+        .filter(
+          (row): row is typeof row & { releaseDate: Date } =>
+            row.releaseDate instanceof Date && row.releaseDate > now,
+        )
         .reduce((sum, row) => sum + row.netValue, 0),
       releasedEstimatedValue: cardRows
-        .filter((row) => row.releaseDate <= now)
+        .filter(
+          (row): row is typeof row & { releaseDate: Date } =>
+            row.releaseDate instanceof Date && row.releaseDate <= now,
+        )
         .reduce((sum, row) => sum + row.netValue, 0),
       nextReleaseDateLabel: nextReleaseDate ? formatDateLabel(nextReleaseDate) : null,
     };
 
-    const recentPayments = await db
-      .select({
-        id: payments.asaasPaymentId,
-        method: payments.method,
-        status: payments.status,
-        amountCents: payments.amountCents,
-        feeAmountCents: payments.feeAmountCents,
-        installmentCount: payments.installmentCount,
-        cardBrand: payments.cardBrand,
-        cardLast4: payments.cardLast4,
-        createdAt: payments.createdAt,
-        orderId: orders.id,
-        payerName: buyers.name,
+    result.lastPayments = [...asaasPayments]
+      .sort((left, right) => {
+        const leftDate =
+          parseAsaasDate(left.dateCreated)?.getTime() ??
+          parseAsaasDate(left.dueDate)?.getTime() ??
+          0;
+        const rightDate =
+          parseAsaasDate(right.dateCreated)?.getTime() ??
+          parseAsaasDate(right.dueDate)?.getTime() ??
+          0;
+
+        return rightDate - leftDate;
       })
-      .from(payments)
-      .innerJoin(orders, eq(payments.orderId, orders.id))
-      .innerJoin(buyers, eq(orders.buyerId, buyers.id))
-      .orderBy(desc(payments.createdAt))
-      .limit(12);
+      .slice(0, 12)
+      .map((payment) => {
+        const grossValue = resolveAsaasPaymentValue(payment.value);
+        const netValue = Math.max(0, resolveAsaasPaymentValue(payment.netValue) || grossValue);
+        const feeValue = Math.max(0, grossValue - netValue);
+        const releaseDate =
+          payment.billingType === "CREDIT_CARD" ? estimateCardReleaseDate(payment) : null;
+        const orderId = extractOrderIdFromExternalReference(payment.externalReference);
+        const payerName =
+          (orderId ? buyerNameByOrderId.get(orderId) : null) ??
+          payment.description ??
+          "Pagamento Asaas";
 
-    result.lastPayments = recentPayments.map((payment) => {
-      const grossValue = payment.amountCents / 100;
-      const feeValue = payment.feeAmountCents / 100;
-      const netValue = Math.max(0, grossValue - feeValue);
-      const releaseDate =
-        payment.method === "credit_card" ? addDays(payment.createdAt, 32) : null;
-
-      return {
-        id: payment.id,
-        method: payment.method,
-        methodLabel: formatPaymentMethodLabel(payment.method, payment.installmentCount),
-        status: payment.status,
-        statusLabel: normalizePaymentStatus(payment.status),
-        value: grossValue,
-        netValue,
-        feeValue,
-        dateLabel: formatDateLabel(payment.createdAt),
-        releaseDateLabel:
-          payment.method === "credit_card" ? formatDateLabel(releaseDate) : "Imediata",
-        externalReference: `order_${payment.orderId}`,
-        payerName: payment.payerName,
-        detailsLabel:
-          payment.method === "credit_card"
-            ? `${payment.cardBrand ?? "Cartão"}${payment.cardLast4 ? ` final ${payment.cardLast4}` : ""}`
-            : payment.id,
-      };
-    });
+        return {
+          id: String(payment.id ?? "-"),
+          method: String(payment.billingType ?? "-"),
+          methodLabel:
+            payment.billingType === "CREDIT_CARD"
+              ? "Cartão"
+              : formatPaymentMethodLabel(String(payment.billingType ?? "-")),
+          status: String(payment.status ?? "-"),
+          statusLabel: normalizePaymentStatus(payment.status),
+          value: grossValue,
+          netValue,
+          feeValue,
+          dateLabel:
+            formatDateLabel(
+              parseAsaasDate(payment.paymentDate) ??
+                parseAsaasDate(payment.clientPaymentDate) ??
+                parseAsaasDate(payment.dueDate) ??
+                parseAsaasDate(payment.dateCreated),
+            ),
+          releaseDateLabel:
+            payment.billingType === "CREDIT_CARD"
+              ? formatDateLabel(releaseDate)
+              : "Imediata",
+          externalReference: String(payment.externalReference ?? "-"),
+          payerName,
+          detailsLabel:
+            payment.description ??
+            String(payment.id ?? "-"),
+        };
+      });
   } catch (cause) {
     result.errors.push(parseAsaasError(cause, "Erro ao consolidar pagamentos."));
   }

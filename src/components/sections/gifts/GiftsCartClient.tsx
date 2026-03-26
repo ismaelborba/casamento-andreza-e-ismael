@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { centsToBRL } from "@/src/lib/money";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
 import { useGiftCart } from "@/src/components/sections/gifts/cart-store";
@@ -10,7 +9,6 @@ import type { Gift } from "@/src/components/sections/gifts/shop-types";
 import { availableQty } from "@/src/components/sections/gifts/shop-types";
 
 export function GiftsCartClient({ gifts }: { gifts: Gift[] }) {
-  const router = useRouter();
   const { gifts: catalog, loading: loadingCatalog } = usePublicGiftsCatalog(gifts);
   const { cartItems, hydrated, items, totals, updateQuantity, removeFromCart } = useGiftCart(catalog);
   const waitingForCatalog = items.length > 0 && cartItems.length === 0 && loadingCatalog;
@@ -134,13 +132,13 @@ export function GiftsCartClient({ gifts }: { gifts: Gift[] }) {
             </div>
 
             <div className="gift-actions-inline gift-summary-actions" style={{ marginTop: 18 }}>
-              <button
-                type="button"
+              <Link
+                href="/gifts/customer"
                 className="gift-button"
-                onClick={() => router.push("/gifts/customer")}
+                style={{ textDecoration: "none" }}
               >
                 Continuar para seus dados
-              </button>
+              </Link>
               <Link
                 href="/gifts"
                 className="gift-button-secondary gift-summary-secondary-action"
