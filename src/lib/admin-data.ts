@@ -6,7 +6,9 @@ import { buyers, gifts, orders, payments, rsvps } from "@/src/db/schema";
 import { getAsaasSettingsStatus } from "@/src/lib/asaas-config";
 import { parseAsaasError, type AsaasRenderedError } from "@/src/lib/asaas-errors";
 import {
+  automaticAnticipationRate,
   getAsaasBalance,
+  getAutomaticAnticipationStatus,
   getPaymentStatistics,
   listPayments,
   type AsaasPaymentRecord,
@@ -53,6 +55,26 @@ function addDays(date: Date, days: number) {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);
   return next;
+}
+
+function addBusinessDays(date: Date, businessDays: number) {
+  const next = new Date(date);
+  let remainingDays = businessDays;
+
+  while (remainingDays > 0) {
+    next.setUTCDate(next.getUTCDate() + 1);
+    const day = next.getUTCDay();
+
+    if (day !== 0 && day !== 6) {
+      remainingDays -= 1;
+    }
+  }
+
+  return next;
+}
+
+function roundCurrency(value: number) {
+  return Math.round(value * 100) / 100;
 }
 
 function formatDateLabel(date: Date | null | undefined) {
@@ -104,15 +126,79 @@ function resolveAsaasPaymentValue(value: unknown) {
   return typeof value === "number" ? value : Number(value ?? 0) || 0;
 }
 
-function estimateCardReleaseDate(payment: AsaasPaymentRecord) {
-  const baseDate =
+function resolveCardBaseDate(payment: AsaasPaymentRecord) {
+  return (
     parseAsaasDate(payment.clientPaymentDate) ??
     parseAsaasDate(payment.paymentDate) ??
     parseAsaasDate(payment.dueDate) ??
     parseAsaasDate(payment.originalDueDate) ??
+    parseAsaasDate(payment.dateCreated)
+  );
+}
+
+function estimateCardReleaseDate(
+  payment: AsaasPaymentRecord,
+  options: {
+    automaticAnticipationEnabled: boolean;
+    estimatedPayoutBusinessDays: number;
+  },
+) {
+  const baseDate = resolveCardBaseDate(payment);
+
+  if (!baseDate) {
+    return null;
+  }
+
+  return options.automaticAnticipationEnabled
+    ? addBusinessDays(baseDate, options.estimatedPayoutBusinessDays)
+    : addDays(baseDate, 32);
+}
+
+function estimateCardNetValues(
+  payment: AsaasPaymentRecord,
+  options: {
+    automaticAnticipationEnabled: boolean;
+    anticipationRate: number;
+  },
+) {
+  const grossValue = roundCurrency(resolveAsaasPaymentValue(payment.value));
+  const baseNetValue = roundCurrency(
+    Math.max(0, resolveAsaasPaymentValue(payment.netValue) || grossValue),
+  );
+  const anticipationFeeValue = options.automaticAnticipationEnabled
+    ? roundCurrency(baseNetValue * options.anticipationRate)
+    : 0;
+  const netValue = roundCurrency(Math.max(0, baseNetValue - anticipationFeeValue));
+  const feeValue = roundCurrency(Math.max(0, grossValue - netValue));
+
+  return {
+    grossValue,
+    baseNetValue,
+    anticipationFeeValue,
+    netValue,
+    feeValue,
+  };
+}
+
+function estimatePendingCardReleaseDate(
+  payment: AsaasPaymentRecord,
+  options: {
+    automaticAnticipationEnabled: boolean;
+    estimatedPayoutBusinessDays: number;
+  },
+) {
+  const baseDate =
+    parseAsaasDate(payment.dueDate) ??
+    parseAsaasDate(payment.originalDueDate) ??
     parseAsaasDate(payment.dateCreated);
 
-  return baseDate ? addDays(baseDate, 32) : null;
+  if (!baseDate) {
+    return null;
+  }
+
+  return options.automaticAnticipationEnabled
+    ? addBusinessDays(baseDate, options.estimatedPayoutBusinessDays)
+    : addDays(baseDate, 32);
 }
 
 function extractOrderIdFromExternalReference(value?: string | null) {
@@ -218,20 +304,33 @@ export async function getAdminRsvps() {
 export async function getAdminFinance() {
   const config = await getAsaasSettingsStatus();
   const now = new Date();
+  const configuredAnticipationRate = automaticAnticipationRate();
+  const estimatedPayoutBusinessDays = 2;
   const result: {
     config: Awaited<ReturnType<typeof getAsaasSettingsStatus>>;
     balance: Awaited<ReturnType<typeof getAsaasBalance>> | null;
     received: ReturnType<typeof normalizeFinanceStats> | null;
     pending: ReturnType<typeof normalizeFinanceStats> | null;
+    anticipation: {
+      available: boolean;
+      enabled: boolean;
+      rate: number;
+      estimatedPayoutBusinessDays: number;
+    };
     card: {
       quantity: number;
       grossValue: number;
       feeValue: number;
       netValue: number;
       averageNetValue: number;
+      anticipationFeeValue: number;
+      pendingQuantity: number;
       awaitingReleaseValue: number;
       releasedEstimatedValue: number;
       nextReleaseDateLabel: string | null;
+      nextPendingDueDateLabel: string | null;
+      nextPendingDueValue: number;
+      nextPendingEstimatedReleaseDateLabel: string | null;
     } | null;
     lastPayments: Array<{
       id: string;
@@ -254,6 +353,12 @@ export async function getAdminFinance() {
     balance: null,
     received: null,
     pending: null,
+    anticipation: {
+      available: false,
+      enabled: false,
+      rate: configuredAnticipationRate,
+      estimatedPayoutBusinessDays,
+    },
     card: null,
     lastPayments: [],
     errors: [],
@@ -286,7 +391,20 @@ export async function getAdminFinance() {
   }
 
   try {
-    const paymentsResponse = await listPayments({ limit: 20 });
+    const anticipationStatus = await getAutomaticAnticipationStatus();
+
+    result.anticipation = {
+      available: true,
+      enabled: Boolean(anticipationStatus.creditCardAutomaticEnabled),
+      rate: configuredAnticipationRate,
+      estimatedPayoutBusinessDays,
+    };
+  } catch (cause) {
+    result.errors.push(parseAsaasError(cause, "Erro ao consultar antecipacao automatica."));
+  }
+
+  try {
+    const paymentsResponse = await listPayments({ limit: 100 });
     const asaasPayments = paymentsResponse.data ?? [];
 
     const orderIds = Array.from(
@@ -321,15 +439,19 @@ export async function getAdminFinance() {
           payment.status !== "REFUNDED",
       )
       .map((payment) => {
-        const grossValue = resolveAsaasPaymentValue(payment.value);
-        const netValue = Math.max(0, resolveAsaasPaymentValue(payment.netValue) || grossValue);
-        const feeValue = Math.max(0, grossValue - netValue);
-        const releaseDate = estimateCardReleaseDate(payment);
+        const releaseDate = estimateCardReleaseDate(payment, {
+          automaticAnticipationEnabled: result.anticipation.enabled,
+          estimatedPayoutBusinessDays: result.anticipation.estimatedPayoutBusinessDays,
+        });
+        const totals = estimateCardNetValues(payment, {
+          automaticAnticipationEnabled:
+            result.anticipation.enabled &&
+            Boolean(releaseDate && releaseDate > now),
+          anticipationRate: result.anticipation.rate,
+        });
 
         return {
-          grossValue,
-          feeValue,
-          netValue,
+          ...totals,
           releaseDate,
         };
       });
@@ -343,15 +465,55 @@ export async function getAdminFinance() {
         .sort((left, right) => left.releaseDate.getTime() - right.releaseDate.getTime())[0]
         ?.releaseDate ?? null;
 
+    const pendingCardRows = asaasPayments
+      .filter(
+        (payment) =>
+          payment.billingType === "CREDIT_CARD" &&
+          (payment.status === "PENDING" || payment.status === "CONFIRMED"),
+      )
+      .map((payment) => {
+        const dueDate =
+          parseAsaasDate(payment.dueDate) ??
+          parseAsaasDate(payment.originalDueDate) ??
+          parseAsaasDate(payment.dateCreated);
+        const estimatedReleaseDate = estimatePendingCardReleaseDate(payment, {
+          automaticAnticipationEnabled: result.anticipation.enabled,
+          estimatedPayoutBusinessDays: result.anticipation.estimatedPayoutBusinessDays,
+        });
+        const totals = estimateCardNetValues(payment, {
+          automaticAnticipationEnabled:
+            result.anticipation.enabled &&
+            Boolean(estimatedReleaseDate && estimatedReleaseDate > now),
+          anticipationRate: result.anticipation.rate,
+        });
+
+        return {
+          value: totals.grossValue,
+          netValue: totals.netValue,
+          dueDate,
+          estimatedReleaseDate,
+        };
+      });
+
+    const nextPendingCharge =
+      pendingCardRows
+        .filter(
+          (row): row is typeof row & { dueDate: Date } =>
+            row.dueDate instanceof Date && row.dueDate >= now,
+        )
+        .sort((left, right) => left.dueDate.getTime() - right.dueDate.getTime())[0] ?? null;
+
     result.card = {
       quantity: cardRows.length,
       grossValue: cardRows.reduce((sum, row) => sum + row.grossValue, 0),
       feeValue: cardRows.reduce((sum, row) => sum + row.feeValue, 0),
       netValue: cardRows.reduce((sum, row) => sum + row.netValue, 0),
+      anticipationFeeValue: cardRows.reduce((sum, row) => sum + row.anticipationFeeValue, 0),
       averageNetValue:
         cardRows.length > 0
           ? cardRows.reduce((sum, row) => sum + row.netValue, 0) / cardRows.length
           : 0,
+      pendingQuantity: pendingCardRows.length,
       awaitingReleaseValue: cardRows
         .filter(
           (row): row is typeof row & { releaseDate: Date } =>
@@ -365,6 +527,12 @@ export async function getAdminFinance() {
         )
         .reduce((sum, row) => sum + row.netValue, 0),
       nextReleaseDateLabel: nextReleaseDate ? formatDateLabel(nextReleaseDate) : null,
+      nextPendingDueDateLabel: nextPendingCharge ? formatDateLabel(nextPendingCharge.dueDate) : null,
+      nextPendingDueValue: nextPendingCharge?.value ?? 0,
+      nextPendingEstimatedReleaseDateLabel:
+        nextPendingCharge?.estimatedReleaseDate
+          ? formatDateLabel(nextPendingCharge.estimatedReleaseDate)
+          : null,
     };
 
     result.lastPayments = [...asaasPayments]
@@ -382,11 +550,20 @@ export async function getAdminFinance() {
       })
       .slice(0, 12)
       .map((payment) => {
-        const grossValue = resolveAsaasPaymentValue(payment.value);
-        const netValue = Math.max(0, resolveAsaasPaymentValue(payment.netValue) || grossValue);
-        const feeValue = Math.max(0, grossValue - netValue);
         const releaseDate =
-          payment.billingType === "CREDIT_CARD" ? estimateCardReleaseDate(payment) : null;
+          payment.billingType === "CREDIT_CARD"
+            ? estimateCardReleaseDate(payment, {
+                automaticAnticipationEnabled: result.anticipation.enabled,
+                estimatedPayoutBusinessDays: result.anticipation.estimatedPayoutBusinessDays,
+              })
+            : null;
+        const totals = estimateCardNetValues(payment, {
+          automaticAnticipationEnabled:
+            payment.billingType === "CREDIT_CARD" &&
+            result.anticipation.enabled &&
+            Boolean(releaseDate && releaseDate > now),
+          anticipationRate: result.anticipation.rate,
+        });
         const orderId = extractOrderIdFromExternalReference(payment.externalReference);
         const payerName =
           (orderId ? buyerNameByOrderId.get(orderId) : null) ??
@@ -402,9 +579,9 @@ export async function getAdminFinance() {
               : formatPaymentMethodLabel(String(payment.billingType ?? "-")),
           status: String(payment.status ?? "-"),
           statusLabel: normalizePaymentStatus(payment.status),
-          value: grossValue,
-          netValue,
-          feeValue,
+          value: totals.grossValue,
+          netValue: totals.netValue,
+          feeValue: totals.feeValue,
           dateLabel:
             formatDateLabel(
               parseAsaasDate(payment.paymentDate) ??

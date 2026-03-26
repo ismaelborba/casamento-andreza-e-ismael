@@ -5,18 +5,35 @@ import type { AsaasSettingsStatus } from "@/src/lib/asaas-config";
 
 type Props = {
   initialStatus: AsaasSettingsStatus;
+  initialAnticipation: {
+    available: boolean;
+    enabled: boolean;
+    rate: number;
+    estimatedPayoutDays: number;
+    error: string | null;
+  };
 };
 
-export function AsaasSettingsForm({ initialStatus }: Props) {
+function rateLabel(value: number) {
+  return `${(value * 100).toFixed(2).replace(".", ",")}%`;
+}
+
+export function AsaasSettingsForm({ initialStatus, initialAnticipation }: Props) {
   const [status, setStatus] = useState(initialStatus);
+  const [anticipation, setAnticipation] = useState(initialAnticipation);
   const [environment, setEnvironment] = useState<"sandbox" | "production">(
     initialStatus.environment,
   );
   const [apiKey, setApiKey] = useState("");
   const [webhookToken, setWebhookToken] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingAnticipation, setSavingAnticipation] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [anticipationSuccess, setAnticipationSuccess] = useState<string | null>(null);
+  const [anticipationError, setAnticipationError] = useState<string | null>(
+    initialAnticipation.error,
+  );
 
   const helperCopy = useMemo(() => {
     if (status.source === "database") {
@@ -68,6 +85,57 @@ export function AsaasSettingsForm({ initialStatus }: Props) {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleAutomaticAnticipationToggle(nextEnabled: boolean) {
+    setSavingAnticipation(true);
+    setAnticipationError(null);
+    setAnticipationSuccess(null);
+
+    try {
+      const response = await fetch("/api/admin/settings/asaas/anticipation", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: nextEnabled }),
+      });
+
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          json?.error?.formErrors?.[0] ??
+            json?.error ??
+            "Não foi possível atualizar a antecipação automática.",
+        );
+      }
+
+      setAnticipation({
+        available: true,
+        enabled: Boolean(json?.anticipation?.enabled),
+        rate:
+          typeof json?.anticipation?.rate === "number"
+            ? json.anticipation.rate
+            : anticipation.rate,
+        estimatedPayoutDays:
+          typeof json?.anticipation?.estimatedPayoutDays === "number"
+            ? json.anticipation.estimatedPayoutDays
+            : anticipation.estimatedPayoutDays,
+        error: null,
+      });
+      setAnticipationSuccess(
+        nextEnabled
+          ? "Antecipação automática ativada para as próximas cobranças no cartão."
+          : "Antecipação automática desativada para as próximas cobranças no cartão.",
+      );
+    } catch (cause) {
+      setAnticipationError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível atualizar a antecipação automática.",
+      );
+    } finally {
+      setSavingAnticipation(false);
     }
   }
 
@@ -192,6 +260,72 @@ export function AsaasSettingsForm({ initialStatus }: Props) {
             ? `Última atualização: ${new Date(status.updatedAt).toLocaleString("pt-BR")}.`
             : "Ainda não existe uma credencial salva no painel."}
         </p>
+
+        <div className="admin-gift-form-section">
+          <div className="admin-panel-header" style={{ marginBottom: 0 }}>
+            <div>
+              <h2>Antecipação automática do cartão</h2>
+              <p>
+                Quando ativa, as próximas cobranças no cartão passam a usar a antecipação
+                automática do Asaas.
+              </p>
+            </div>
+          </div>
+
+          <div className="admin-stat-grid">
+            <div className="admin-mini-card">
+              <strong>Status</strong>
+              <span>
+                {!status.ready
+                  ? "Configure primeiro as credenciais."
+                  : anticipation.enabled
+                    ? "Ativada"
+                    : "Desativada"}
+              </span>
+            </div>
+            <div className="admin-mini-card">
+              <strong>Prazo estimado</strong>
+              <span>Até {anticipation.estimatedPayoutDays} dias úteis</span>
+            </div>
+            <div className="admin-mini-card">
+              <strong>Taxa considerada no admin</strong>
+              <span>{rateLabel(anticipation.rate)}</span>
+            </div>
+          </div>
+
+          <p className="admin-inline-note">
+            O financeiro do admin usa essa taxa para estimar o líquido do cartão quando a
+            antecipação automática estiver ativa. Se a sua conta usar outra taxa, ajuste{" "}
+            <code>ASAAS_AUTOMATIC_ANTICIPATION_RATE</code>.
+          </p>
+
+          {!anticipation.available && status.ready ? (
+            <p className="admin-inline-note">
+              Se a API da sua conta não liberar essa consulta, o botão abaixo ainda tenta
+              atualizar a configuração diretamente no Asaas.
+            </p>
+          ) : null}
+
+          {anticipationError ? <p className="admin-form-error">{anticipationError}</p> : null}
+          {anticipationSuccess ? (
+            <p className="admin-form-success">{anticipationSuccess}</p>
+          ) : null}
+
+          <div className="admin-actions-inline">
+            <button
+              type="button"
+              className={anticipation.enabled ? "admin-button-secondary" : "admin-button"}
+              onClick={() => handleAutomaticAnticipationToggle(!anticipation.enabled)}
+              disabled={!status.ready || savingAnticipation}
+            >
+              {savingAnticipation
+                ? "Atualizando..."
+                : anticipation.enabled
+                  ? "Desativar antecipação automática"
+                  : "Ativar antecipação automática"}
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   );

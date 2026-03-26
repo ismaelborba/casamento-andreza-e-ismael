@@ -39,6 +39,12 @@ export type AsaasPaymentListResponse = {
   totalCount?: number;
 };
 
+export type AsaasAutomaticAnticipationConfig = {
+  creditCardAutomaticEnabled?: boolean;
+};
+
+const DEFAULT_AUTOMATIC_ANTICIPATION_RATE = 0.0115;
+
 async function requestConfig() {
   const config = await getAsaasRuntimeConfig();
 
@@ -115,4 +121,36 @@ export async function listPayments(params: {
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<AsaasPaymentListResponse>;
+}
+
+export function automaticAnticipationRate() {
+  const raw = process.env.ASAAS_AUTOMATIC_ANTICIPATION_RATE;
+  const parsed = Number(raw);
+
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_AUTOMATIC_ANTICIPATION_RATE;
+}
+
+export async function getAutomaticAnticipationStatus() {
+  const config = await requestConfig();
+  const res = await fetch(`${config.baseUrl}/anticipations/configurations`, {
+    method: "GET",
+    headers: config.headers,
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<AsaasAutomaticAnticipationConfig>;
+}
+
+export async function updateAutomaticAnticipationStatus(enabled: boolean) {
+  const config = await requestConfig();
+  const res = await fetch(`${config.baseUrl}/anticipations/configurations`, {
+    method: "PUT",
+    headers: config.headers,
+    cache: "no-store",
+    body: JSON.stringify({
+      creditCardAutomaticEnabled: enabled,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<AsaasAutomaticAnticipationConfig>;
 }

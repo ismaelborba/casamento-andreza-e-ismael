@@ -16,9 +16,23 @@ function brl(value: number) {
 export default async function AdminFinancePage() {
   const data = await getAdminFinance();
   const balance = data.balance?.availableBalance ?? data.balance?.balance ?? null;
-  const nextCardRelease = data.card?.nextReleaseDateLabel ?? "Sem agenda";
   const config = data.config;
   const usingEnvFallback = config.source === "env" && !config.hasStoredCredentials;
+  const automaticAnticipationEnabled = data.anticipation.enabled;
+  const releaseWindowLabel = automaticAnticipationEnabled
+    ? `até ${data.anticipation.estimatedPayoutBusinessDays} dias úteis`
+    : "D+32";
+  const nextCardRelease =
+    data.card?.nextReleaseDateLabel ??
+    data.card?.nextPendingEstimatedReleaseDateLabel ??
+    "Sem agenda";
+  const nextReleaseCopy = data.card?.nextPendingDueDateLabel
+    ? automaticAnticipationEnabled
+      ? `Próxima parcela vence em ${data.card.nextPendingDueDateLabel}; com antecipação automática, a estimativa é cair em até ${data.anticipation.estimatedPayoutBusinessDays} dias úteis.`
+      : `Próxima parcela vence em ${data.card.nextPendingDueDateLabel}; sem antecipação automática, a previsão segue D+32.`
+    : automaticAnticipationEnabled
+      ? `Com antecipação automática ativa, o admin estima liberação em até ${data.anticipation.estimatedPayoutBusinessDays} dias úteis.`
+      : "No cartão sem antecipação, o Asaas costuma liberar o valor 32 dias após a efetivação.";
 
   return (
     <>
@@ -78,18 +92,20 @@ export default async function AdminFinancePage() {
           copy="Quantidade de recebimentos via Pix retornada pelo Asaas."
         />
         <AdminMetricCard
-          label="Cartões pagos"
+          label="Cobranças no cartão"
           value={data.card ? String(data.card.quantity) : "-"}
           copy={
             data.card
-              ? `${brl(data.card.awaitingReleaseValue)} ainda em janela de liberação.`
+              ? automaticAnticipationEnabled
+                ? `${brl(data.card.awaitingReleaseValue)} ainda aguardando repasse com antecipação automática.`
+                : `${brl(data.card.awaitingReleaseValue)} ainda em janela de liberação.`
               : "Leitura dos pagamentos de cartão aprovados no site."
           }
         />
         <AdminMetricCard
           label="Próxima liberação"
           value={nextCardRelease}
-          copy="No cartão, o Asaas tende a liberar o valor 32 dias após o pagamento efetivado."
+          copy={nextReleaseCopy}
         />
       </section>
 
@@ -179,10 +195,11 @@ export default async function AdminFinancePage() {
             <article className="admin-panel">
               <div className="admin-panel-header">
                 <div>
-                  <h2>Cartão confirmado</h2>
+                  <h2>Cartão e parcelas</h2>
                   <p>
-                    Os pagamentos no cartão são aprovados na hora, mas o valor costuma ser
-                    liberado pelo Asaas 32 dias depois.
+                    {automaticAnticipationEnabled
+                      ? `A antecipação automática está ativa para as próximas cobranças no cartão. O líquido abaixo já considera a taxa configurada no admin e a previsão de repasse em ${releaseWindowLabel}.`
+                      : "Os pagamentos no cartão são aprovados na hora, mas o valor costuma ser liberado pelo Asaas 32 dias depois."}
                   </p>
                 </div>
               </div>
@@ -197,7 +214,7 @@ export default async function AdminFinancePage() {
                   <strong>{brl(data.card?.grossValue ?? 0)}</strong>
                 </div>
                 <div>
-                  <span>Valor líquido</span>
+                  <span>{automaticAnticipationEnabled ? "Líquido estimado" : "Valor líquido"}</span>
                   <strong>{brl(data.card?.netValue ?? 0)}</strong>
                 </div>
                 <div>
@@ -208,12 +225,40 @@ export default async function AdminFinancePage() {
 
               <div className="admin-finance-mini-grid">
                 <div className="admin-mini-card">
-                  <strong>Próxima liberação estimada</strong>
-                  <span>{data.card?.nextReleaseDateLabel ?? "Nenhuma prevista no momento."}</span>
+                  <strong>Próxima parcela</strong>
+                  <span>
+                    {data.card?.nextPendingDueDateLabel
+                      ? `${data.card.nextPendingDueDateLabel} · ${brl(data.card.nextPendingDueValue)}`
+                      : "Nenhuma prevista no momento."}
+                  </span>
                 </div>
                 <div className="admin-mini-card">
-                  <strong>Já liberado estimado</strong>
-                  <span>{brl(data.card?.releasedEstimatedValue ?? 0)}</span>
+                  <strong>Liberação estimada da próxima</strong>
+                  <span>
+                    {data.card?.nextPendingEstimatedReleaseDateLabel ??
+                      data.card?.nextReleaseDateLabel ??
+                      "Sem previsão no momento."}
+                  </span>
+                </div>
+                <div className="admin-mini-card">
+                  <strong>Taxa de antecipação estimada</strong>
+                  <span>
+                    {automaticAnticipationEnabled
+                      ? `${brl(data.card?.anticipationFeeValue ?? 0)} com taxa de ${(
+                          data.anticipation.rate * 100
+                        )
+                          .toFixed(2)
+                          .replace(".", ",")}%`
+                      : "Antecipação automática desativada."}
+                  </span>
+                </div>
+                <div className="admin-mini-card">
+                  <strong>Prazo usado no admin</strong>
+                  <span>
+                    {automaticAnticipationEnabled
+                      ? `Até ${data.anticipation.estimatedPayoutBusinessDays} dias úteis`
+                      : "32 dias após o pagamento efetivado"}
+                  </span>
                 </div>
               </div>
             </article>
@@ -223,7 +268,10 @@ export default async function AdminFinancePage() {
             <div className="admin-panel-header">
               <div>
                 <h2>Últimos pagamentos</h2>
-                <p>Histórico recente do site com Pix e cartão, incluindo a previsão de liberação do Asaas.</p>
+                <p>
+                  Histórico recente do site com Pix e cartão, incluindo a previsão de liberação
+                  do Asaas.
+                </p>
               </div>
             </div>
 
@@ -241,34 +289,48 @@ export default async function AdminFinancePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.lastPayments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td>
-                        <span className="admin-table-title">{payment.payerName}</span>
-                        <span className="admin-table-copy">{payment.detailsLabel}</span>
-                      </td>
-                      <td>
-                        <span className="admin-table-title">{payment.methodLabel}</span>
-                        <span className="admin-table-copy">{payment.id}</span>
-                      </td>
-                      <td>
-                        <span className={statusClassName(payment.status)}>{payment.statusLabel}</span>
-                      </td>
-                      <td>
-                        <span className="admin-table-title">{brl(payment.value)}</span>
-                        <span className="admin-table-copy">Líquido previsto {brl(payment.netValue)}</span>
-                      </td>
-                      <td>
-                        <span className="admin-table-copy">{payment.dateLabel}</span>
-                      </td>
-                      <td>
-                        <span className="admin-table-copy">{payment.releaseDateLabel}</span>
-                      </td>
-                      <td>
-                        <span className="admin-table-copy">{payment.externalReference}</span>
+                  {data.lastPayments.length ? (
+                    data.lastPayments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td>
+                          <span className="admin-table-title">{payment.payerName}</span>
+                          <span className="admin-table-copy">{payment.detailsLabel}</span>
+                        </td>
+                        <td>
+                          <span className="admin-table-title">{payment.methodLabel}</span>
+                          <span className="admin-table-copy">{payment.id}</span>
+                        </td>
+                        <td>
+                          <span className={statusClassName(payment.status)}>
+                            {payment.statusLabel}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="admin-table-title">{brl(payment.value)}</span>
+                          <span className="admin-table-copy">
+                            Líquido estimado {brl(payment.netValue)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="admin-table-copy">{payment.dateLabel}</span>
+                        </td>
+                        <td>
+                          <span className="admin-table-copy">{payment.releaseDateLabel}</span>
+                        </td>
+                        <td>
+                          <span className="admin-table-copy">{payment.externalReference}</span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7}>
+                        <span className="admin-table-copy">
+                          Nenhum pagamento recente foi retornado pela API do Asaas.
+                        </span>
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
