@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GiftCard } from "@/src/components/sections/gifts/GiftCard";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
 import { showGiftAddedToast } from "@/src/components/sections/gifts/cart-toast";
@@ -25,6 +25,7 @@ export function GiftsShopClient({ gifts, initialGiftId }: Props) {
   const [sort, setSort] = useState<SortValue>("default");
   const [priceRange, setPriceRange] = useState<PriceRangeValue>("all");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const { addToCart, isInCart } = useGiftCart(gifts);
 
   const filtered = useMemo(() => {
@@ -69,9 +70,91 @@ export function GiftsShopClient({ gifts, initialGiftId }: Props) {
     [gifts],
   );
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+
+    if (search.trim()) count += 1;
+    if (priceRange !== "all") count += 1;
+    if (sort !== "default") count += 1;
+    if (onlyAvailable) count += 1;
+
+    return count;
+  }, [onlyAvailable, priceRange, search, sort]);
+
+  useEffect(() => {
+    if (!mobileFiltersOpen || typeof document === "undefined") {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [mobileFiltersOpen]);
+
+  useEffect(() => {
+    if (!mobileFiltersOpen || typeof window === "undefined") {
+      return;
+    }
+
+    function handleResize() {
+      if (window.innerWidth > 860) {
+        setMobileFiltersOpen(false);
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [mobileFiltersOpen]);
+
   return (
     <div className="gifts-shell">
       <GiftCheckoutSteps current="catalog" />
+
+      <section className="gift-mobile-discovery">
+        <div className="gift-mobile-discovery-head">
+          <div>
+            <strong>{filtered.length} presentes na vitrine</strong>
+            <span>
+              {activeFiltersCount
+                ? `${activeFiltersCount} filtro(s) aplicado(s)`
+                : `${totalAvailable} cotas disponiveis para escolher`}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="gift-mobile-filter-toggle"
+            aria-expanded={mobileFiltersOpen}
+            aria-controls="gift-mobile-filters"
+            onClick={() => setMobileFiltersOpen((current) => !current)}
+          >
+            {mobileFiltersOpen
+              ? "Fechar filtros"
+              : activeFiltersCount
+                ? `Filtros (${activeFiltersCount})`
+                : "Abrir filtros"}
+          </button>
+        </div>
+
+        <input
+          className="gift-input gift-mobile-search-input"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Buscar presente"
+        />
+      </section>
+
+      {mobileFiltersOpen ? (
+        <button
+          type="button"
+          className="gift-mobile-sidebar-backdrop"
+          aria-label="Fechar filtros"
+          onClick={() => setMobileFiltersOpen(false)}
+        />
+      ) : null}
 
       <div className="gift-grid">
         <GiftsSidebar
@@ -81,6 +164,10 @@ export function GiftsShopClient({ gifts, initialGiftId }: Props) {
           onlyAvailable={onlyAvailable}
           total={gifts.length}
           available={totalAvailable}
+          matchingCount={filtered.length}
+          activeFiltersCount={activeFiltersCount}
+          mobileOpen={mobileFiltersOpen}
+          onMobileClose={() => setMobileFiltersOpen(false)}
           onSearchChange={setSearch}
           onSortChange={setSort}
           onPriceRangeChange={setPriceRange}

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Header } from "@/src/components/layout/Header";
-import { Footer } from "@/src/components/layout/Footer";
 import { GiftCheckoutSteps } from "@/src/components/sections/gifts/GiftCheckoutSteps";
 import { centsToBRL } from "@/src/lib/money";
 import {
@@ -279,8 +278,8 @@ export default function CheckoutPage() {
     !cardForm.phone;
 
   return (
-    <div className="gift-checkout-page">
-      <Header />
+    <div className="gift-checkout-page gift-checkout-page--flow-header">
+      <Header brandHref={null} showCart={false} floating={false} />
 
       <main className="gift-checkout-shell">
         <GiftCheckoutSteps current="checkout" />
@@ -803,8 +802,6 @@ export default function CheckoutPage() {
           </>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

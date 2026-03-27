@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { Footer } from "@/src/components/layout/Footer";
 import { Header } from "@/src/components/layout/Header";
 import { GiftProductClient } from "@/src/components/sections/gifts/GiftProductClient";
 import { getPublicGifts } from "@/src/lib/admin-data";
@@ -18,10 +17,9 @@ export default async function GiftDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="gift-detail-page">
-      <Header />
+    <div className="gift-detail-page gift-detail-page--flow-header">
+      <Header brandHref={null} floating={false} />
       <GiftProductClient gift={gift} gifts={gifts} />
-      <Footer />
     </div>
   );
 }

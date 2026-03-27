@@ -49,6 +49,19 @@ export function HeaderCart() {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open || typeof document === "undefined") {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [open]);
+
   return (
     <div ref={shellRef} className={`site-header-cart ${open ? "is-open" : ""}`}>
       <button
@@ -60,89 +73,98 @@ export function HeaderCart() {
         onClick={() => setOpen((current) => !current)}
       >
         <ShoppingCart size={18} />
-        <span>Carrinho</span>
+        {/* <span>Carrinho</span> */}
         <strong>{badgeQuantity}</strong>
       </button>
 
       {open ? (
-        <div className="site-header-cart-panel" role="dialog" aria-label="Itens do carrinho">
-          <div className="site-header-cart-head">
-            <div>
-              <strong>Seu carrinho</strong>
-              <span>{badgeQuantity} item(ns) selecionado(s)</span>
-            </div>
+        <>
+          <button
+            type="button"
+            className="site-header-cart-backdrop"
+            aria-label="Fechar carrinho"
+            onClick={() => setOpen(false)}
+          />
 
-            <button
-              type="button"
-              className="site-header-cart-close"
-              aria-label="Fechar carrinho"
-              onClick={() => setOpen(false)}
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          {!hydrated || waitingForCatalog ? (
-            <div className="site-header-cart-empty">Carregando seus presentes...</div>
-          ) : cartItems.length === 0 ? (
-            <div className="site-header-cart-empty">
-              Seu carrinho esta vazio. Escolha um presente para continuar.
-            </div>
-          ) : (
-            <>
-              <div className="site-header-cart-list">
-                {previewItems.map((item) => (
-                  <article key={item.gift.id} className="site-header-cart-item">
-                    <div className="site-header-cart-item-media">
-                      {item.gift.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.gift.imageUrl} alt={item.gift.name} />
-                      ) : (
-                        <div className="site-header-cart-item-fallback">Presente</div>
-                      )}
-                    </div>
-
-                    <div className="site-header-cart-item-copy">
-                      <strong>{item.gift.name}</strong>
-                      <span>
-                        {item.quantity} x {centsToBRL(item.gift.priceCents)}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="site-header-cart-remove"
-                      aria-label={`Remover ${item.gift.name} do carrinho`}
-                      onClick={() => removeFromCart(item.gift.id)}
-                    >
-                      Remover
-                    </button>
-                  </article>
-                ))}
+          <div className="site-header-cart-panel" role="dialog" aria-label="Itens do carrinho" aria-modal="true">
+            <div className="site-header-cart-head">
+              <div>
+                <strong>Seu carrinho</strong>
+                <span>{badgeQuantity} item(ns) selecionado(s)</span>
               </div>
 
-              {hiddenItemsCount ? (
-                <p className="site-header-cart-more">
-                  +{hiddenItemsCount} item(ns) a mais no carrinho.
-                </p>
-              ) : null}
+              <button
+                type="button"
+                className="site-header-cart-close"
+                aria-label="Fechar carrinho"
+                onClick={() => setOpen(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-              <div className="site-header-cart-summary">
-                <span>Subtotal</span>
-                <strong>{centsToBRL(totals.subtotalCents)}</strong>
+            {!hydrated || waitingForCatalog ? (
+              <div className="site-header-cart-empty">Carregando seus presentes...</div>
+            ) : cartItems.length === 0 ? (
+              <div className="site-header-cart-empty">
+                Seu carrinho esta vazio. Escolha um presente para continuar.
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                <div className="site-header-cart-list">
+                  {previewItems.map((item) => (
+                    <article key={item.gift.id} className="site-header-cart-item">
+                      <div className="site-header-cart-item-media">
+                        {item.gift.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.gift.imageUrl} alt={item.gift.name} />
+                        ) : (
+                          <div className="site-header-cart-item-fallback">Presente</div>
+                        )}
+                      </div>
 
-          <div className="site-header-cart-actions">
-            <Link href="/gifts" className="site-header-cart-primary" onClick={() => setOpen(false)}>
-              Escolher presentes
-            </Link>
-            <Link href="/gifts/cart" className="site-header-cart-secondary" onClick={() => setOpen(false)}>
-              Ver carrinho
-            </Link>
+                      <div className="site-header-cart-item-copy">
+                        <strong>{item.gift.name}</strong>
+                        <span>
+                          {item.quantity} x {centsToBRL(item.gift.priceCents)}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="site-header-cart-remove"
+                        aria-label={`Remover ${item.gift.name} do carrinho`}
+                        onClick={() => removeFromCart(item.gift.id)}
+                      >
+                        Remover
+                      </button>
+                    </article>
+                  ))}
+                </div>
+
+                {hiddenItemsCount ? (
+                  <p className="site-header-cart-more">
+                    +{hiddenItemsCount} item(ns) a mais no carrinho.
+                  </p>
+                ) : null}
+
+                <div className="site-header-cart-summary">
+                  <span>Subtotal</span>
+                  <strong>{centsToBRL(totals.subtotalCents)}</strong>
+                </div>
+              </>
+            )}
+
+            <div className="site-header-cart-actions">
+              <Link href="/gifts" className="site-header-cart-primary" onClick={() => setOpen(false)}>
+                Escolher presentes
+              </Link>
+              <Link href="/gifts/cart" className="site-header-cart-secondary" onClick={() => setOpen(false)}>
+                Ver carrinho
+              </Link>
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );
