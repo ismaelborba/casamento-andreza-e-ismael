@@ -1388,6 +1388,366 @@ a {
   max-width: 42ch;
 }
 
+.admin-orders-mobile-list {
+  display: none;
+}
+
+.admin-order-card {
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(5, 6, 6, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.admin-order-card + .admin-order-card {
+  margin-top: 14px;
+}
+
+.admin-order-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-order-card-kicker,
+.admin-order-card-label,
+.admin-order-details-label {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-order-card-head h3 {
+  margin: 8px 0 6px;
+  font-size: 19px;
+}
+
+.admin-order-card-head p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-order-card-total {
+  min-width: 116px;
+  text-align: right;
+}
+
+.admin-order-card-total strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 20px;
+  color: var(--admin-ink);
+}
+
+.admin-order-card-statuses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.admin-order-card-status-group,
+.admin-order-card-field {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-order-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.admin-order-card-field strong {
+  color: var(--admin-ink);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.admin-order-card-actions {
+  margin-top: 18px;
+}
+
+.admin-order-modal-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(5, 6, 6, 0.1);
+  border-radius: 16px;
+  background: rgba(239, 236, 232, 0.88);
+  color: var(--gift-ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.admin-order-modal-trigger:hover {
+  background: rgba(214, 209, 204, 0.5);
+  border-color: rgba(5, 6, 6, 0.14);
+}
+
+.admin-order-modal-trigger small {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-order-modal-trigger.is-compact {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 14px;
+}
+
+.admin-order-modal-trigger.is-compact small {
+  display: none;
+}
+
+.admin-order-total-cell {
+  display: grid;
+  grid-template-columns: auto 42px;
+  align-items: center;
+  justify-items: center;
+  justify-content: start;
+  gap: 10px;
+}
+
+.admin-orders-desktop .admin-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.admin-orders-desktop .admin-table thead th {
+  border-bottom: 1px solid rgba(5, 6, 6, 0.08);
+}
+
+.admin-orders-desktop .admin-table thead th:last-child {
+  padding-right: 26px;
+}
+
+.admin-orders-desktop .admin-table tbody td {
+  padding: 22px 16px;
+  vertical-align: middle;
+  background: transparent;
+}
+
+.admin-orders-desktop .admin-table tbody tr + tr td {
+  border-top: 1px solid rgba(5, 6, 6, 0.08);
+}
+
+.admin-orders-desktop .admin-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.admin-order-date-block,
+.admin-order-customer-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-order-date {
+  color: var(--admin-ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.admin-order-time {
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-order-customer-meta {
+  color: var(--admin-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-order-customer-summary {
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-order-payment-method {
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-order-status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.admin-order-total-value {
+  min-width: 0;
+  text-align: right;
+  color: var(--admin-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.admin-order-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 6, 6, 0.42);
+  backdrop-filter: blur(10px);
+}
+
+.admin-order-modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(88vh, 920px);
+  overflow: auto;
+  padding: 26px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: linear-gradient(180deg, rgba(239, 236, 232, 0.98), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 28px 80px rgba(5, 6, 6, 0.24);
+}
+
+.admin-order-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-order-modal-kicker,
+.admin-order-details-label {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-order-modal-header h3 {
+  margin: 8px 0 6px;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.admin-order-modal-header p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 14px;
+}
+
+.admin-order-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(5, 6, 6, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--gift-ink);
+  cursor: pointer;
+}
+
+.admin-order-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.admin-order-modal-card,
+.admin-order-modal-section {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(5, 6, 6, 0.08);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.admin-order-modal-card {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-order-modal-card strong {
+  color: var(--admin-ink);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.admin-order-modal-section {
+  margin-top: 22px;
+}
+
+.admin-order-item-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-order-item-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(5, 6, 6, 0.08);
+}
+
+.admin-order-item-list li div strong {
+  font-size: 16px;
+}
+
+.admin-order-item-list li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.admin-order-item-list strong,
+.admin-order-item-total,
+.admin-order-details-value {
+  color: var(--admin-ink);
+}
+
+.admin-order-item-list span,
+.admin-order-details-empty,
+.admin-order-details-message {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.admin-order-item-total {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-order-id {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
 .admin-align-right {
   text-align: right;
 }
@@ -1395,6 +1755,7 @@ a {
 .admin-status {
   display: inline-flex;
   align-items: center;
+  max-width: fit-content;
   gap: 8px;
   padding: 6px 10px;
   border-radius: 999px;
@@ -4425,8 +4786,52 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .admin-orders-desktop {
+    display: none;
+  }
+
+  .admin-orders-mobile-list {
+    display: block;
+  }
+
   .admin-table-shell {
     overflow-x: auto;
+  }
+
+  .admin-order-card {
+    padding: 18px;
+  }
+
+  .admin-order-card-head,
+  .admin-order-total-cell,
+  .admin-order-item-list li {
+    flex-direction: column;
+  }
+
+  .admin-order-card-total {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .admin-order-card-statuses,
+  .admin-order-card-grid,
+  .admin-order-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-modal-backdrop {
+    padding: 12px;
+  }
+
+  .admin-order-modal {
+    width: min(100vw - 12px, 760px);
+    max-height: calc(100vh - 24px);
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .admin-order-modal-header h3 {
+    font-size: 24px;
   }
 
   .gifts-shell,

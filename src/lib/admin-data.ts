@@ -2,7 +2,7 @@ import "server-only";
 
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/src/db";
-import { buyers, gifts, orders, payments, rsvps } from "@/src/db/schema";
+import { buyers, gifts, orderItems, orders, payments, rsvps } from "@/src/db/schema";
 import { getAsaasSettingsStatus } from "@/src/lib/asaas-config";
 import { parseAsaasError, type AsaasRenderedError } from "@/src/lib/asaas-errors";
 import {
@@ -273,7 +273,7 @@ export async function getAdminOverview() {
 }
 
 export async function getAdminOrders() {
-  return db
+  const baseRows = await db
     .select({
       orderId: orders.id,
       status: orders.status,
@@ -295,6 +295,47 @@ export async function getAdminOrders() {
     .leftJoin(payments, eq(payments.orderId, orders.id))
     .orderBy(desc(orders.createdAt))
     .limit(200);
+
+  if (baseRows.length === 0) {
+    return [];
+  }
+
+  const itemRows = await db
+    .select({
+      orderId: orderItems.orderId,
+      giftId: orderItems.giftId,
+      giftName: gifts.name,
+      quantity: orderItems.quantity,
+      unitPriceCents: orderItems.unitPriceCents,
+      lineTotalCents:
+        sql<number>`${orderItems.quantity} * ${orderItems.unitPriceCents}`.mapWith(Number),
+    })
+    .from(orderItems)
+    .innerJoin(gifts, eq(orderItems.giftId, gifts.id))
+    .where(inArray(orderItems.orderId, baseRows.map((row) => row.orderId)))
+    .orderBy(desc(orderItems.createdAt));
+
+  const itemsByOrderId = new Map<
+    string,
+    Array<{
+      giftId: string;
+      giftName: string;
+      quantity: number;
+      unitPriceCents: number;
+      lineTotalCents: number;
+    }>
+  >();
+
+  for (const item of itemRows) {
+    const current = itemsByOrderId.get(item.orderId) ?? [];
+    current.push(item);
+    itemsByOrderId.set(item.orderId, current);
+  }
+
+  return baseRows.map((row) => ({
+    ...row,
+    items: itemsByOrderId.get(row.orderId) ?? [],
+  }));
 }
 
 export async function getAdminRsvps() {
