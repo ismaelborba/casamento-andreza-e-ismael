@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 import { AdminLogoutButton } from "@/src/components/sections/admin/logout-button";
 
 const items = [
@@ -23,8 +24,8 @@ const items = [
   },
   {
     href: "/admin/rsvps",
-    label: "RSVP",
-    description: "Confirmações e mensagens",
+    label: "Convidados",
+    description: "Cadastro, confirmações e mensagens",
   },
   {
     href: "/admin/finance",
@@ -51,51 +52,108 @@ export function AdminShellClient({ userEmail, children }: Props) {
       pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href)),
   );
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 1080) {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileOpen]);
+
   return (
     <div className="admin-shell" data-sidebar-open={mobileOpen ? "true" : "false"}>
-      <aside className="admin-sidebar">
-        <div className="admin-brand">
-          <span className="admin-brand-mark">AI</span>
-          <div className="admin-brand-copy">
-            <span className="admin-brand-eyebrow">Área privada</span>
-            <strong>Painel do casamento</strong>
-            <span className="admin-brand-meta">Andreza & Ismael</span>
+      {mobileOpen ? (
+        <button
+          type="button"
+          className="admin-sidebar-backdrop"
+          aria-label="Fechar menu"
+          onClick={() => setMobileOpen(false)}
+        />
+      ) : null}
+
+      <aside className="admin-sidebar" id="admin-sidebar">
+        <div className="admin-sidebar-scroll">
+          <div className="admin-brand">
+            <Image
+              src="/assets/images/logo-sem-fundo.png"
+              width={72}
+              height={72}
+              className="admin-brand-logo"
+              alt="Andreza e Ismael"
+            />
+            <div className="admin-brand-copy">
+              <span className="admin-brand-eyebrow">Área privada</span>
+              <strong>Painel do casamento</strong>
+              <span className="admin-brand-meta">Andreza & Ismael</span>
+            </div>
+            <button
+              type="button"
+              className="admin-button-secondary admin-sidebar-close admin-hide-desktop"
+              aria-label="Fechar menu"
+              onClick={() => setMobileOpen(false)}
+            >
+              Fechar
+            </button>
           </div>
-        </div>
 
-        <nav className="admin-nav">
-          {items.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !== "/admin" && pathname.startsWith(item.href));
+          <nav className="admin-nav" aria-label="Menu administrativo">
+            {items.map((item) => {
+              const active =
+                pathname === item.href ||
+                (item.href !== "/admin" && pathname.startsWith(item.href));
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={`admin-nav-link ${active ? "is-active" : ""}`}
-              >
-                <span className="admin-nav-copy">
-                  <strong>{item.label}</strong>
-                  <span>{item.description}</span>
-                </span>
-                <span aria-hidden="true">+</span>
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`admin-nav-link ${active ? "is-active" : ""}`}
+                >
+                  <span className="admin-nav-copy">
+                    <strong>{item.label}</strong>
+                    <span>{item.description}</span>
+                  </span>
+                  <span aria-hidden="true">+</span>
+                </Link>
+              );
+            })}
+          </nav>
 
-        <div className="admin-sidebar-card">
-          <strong>Acesso autorizado</strong>
-          <p>
-            O painel está liberado apenas para <strong>{userEmail}</strong> e a
-            sessão fica protegida por cookie seguro.
-          </p>
-        </div>
-
-        <div className="admin-sidebar-footer">
-          <AdminLogoutButton />
+          <div className="admin-sidebar-footer">
+            <AdminLogoutButton />
+          </div>
         </div>
       </aside>
 
@@ -105,6 +163,8 @@ export function AdminShellClient({ userEmail, children }: Props) {
             <button
               type="button"
               className="admin-button-secondary admin-mobile-toggle"
+              aria-expanded={mobileOpen}
+              aria-controls="admin-sidebar"
               onClick={() => setMobileOpen((value) => !value)}
             >
               {mobileOpen ? "Fechar menu" : "Abrir menu"}

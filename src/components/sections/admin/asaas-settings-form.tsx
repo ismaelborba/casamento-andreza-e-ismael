@@ -200,12 +200,6 @@ export function AsaasSettingsForm({ initialStatus, initialAnticipation }: Props)
             mostramos uma mensagem mais clara para você corrigir sem precisar olhar o JSON bruto.
           </p>
 
-          <p className="admin-inline-note">
-            Para reforçar a criptografia, defina <code>ASAAS_SETTINGS_SECRET</code> no ambiente.
-            Se ele não existir, o sistema usa <code>ADMIN_SESSION_SECRET</code> ou{" "}
-            <code>ADMIN_PASSWORD</code> como fallback.
-          </p>
-
           {error ? <p className="admin-form-error">{error}</p> : null}
           {success ? <p className="admin-form-success">{success}</p> : null}
 
@@ -269,6 +263,7 @@ export function AsaasSettingsForm({ initialStatus, initialAnticipation }: Props)
                 Quando ativa, as próximas cobranças no cartão passam a usar a antecipação
                 automática do Asaas.
               </p>
+              <p><i><b>Obs:</b> Apenas para contas Pessoa Jurídica</i></p>
             </div>
           </div>
 

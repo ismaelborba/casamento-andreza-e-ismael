@@ -9,8 +9,8 @@ export default async function AdminGiftsPage() {
     <>
       <AdminPageHeader
         kicker="Lista de presentes"
-        title="Cadastro de presentes com cara de painel de verdade."
-        description="Voces conseguem montar toda a lista aqui, com controle de valor, quantidade, visibilidade e acompanhamento das cotas vendidas ou reservadas."
+        title="Acompanhe seus Presentes"
+        description="Vocês conseguem montar toda a lista aqui, com controle de valor, quantidade, visibilidade e acompanhamento das cotas vendidas ou reservadas."
       />
 
       <AdminGiftsManager initialRows={rows} />

@@ -11,8 +11,8 @@ export default async function AdminRsvpsPage() {
   return (
     <>
       <AdminPageHeader
-        kicker="Confirmações"
-        title="RSVP organizado para acompanhar quem vem e quem não vem."
+        kicker="RSVP"
+        title="Convidados & Confirmações"
         description="As respostas ficam centralizadas com nome, contato, quantidade de acompanhantes e mensagem enviada pelo convidado."
       />
 

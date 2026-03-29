@@ -38,7 +38,7 @@ export default async function AdminFinancePage() {
     <>
       <AdminPageHeader
         kicker="Financeiro"
-        title="Acompanhem o Asaas com leitura mais clara."
+        title="Acompanhem seu Financeiro"
         description="Saldo, Pix, cartão e previsão de liberação ficam organizados aqui para uma leitura rápida do que entrou e do que ainda vai cair na conta."
       />
 

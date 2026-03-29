@@ -12,8 +12,8 @@ export default async function AdminOrdersPage() {
     <>
       <AdminPageHeader
         kicker="Compras"
-        title="Pedidos e pagamentos em um fluxo mais claro."
-        description="Aqui voces acompanham quem comprou, quanto entrou, o status do pedido e o link direto da cobranca quando precisarem consultar algo no Asaas."
+        title="Pedidos & Pagamentos"
+        description="Aqui vocês acompanham quem comprou, quanto entrou, o status do pedido e o link direto da cobrança quando precisarem consultar algo no Asaas."
       />
 
       <section className="admin-panel">

@@ -26,7 +26,7 @@ export default async function AdminDashboardPage() {
     <>
       <AdminPageHeader
         kicker="Painel principal"
-        title="Tudo o que importa para o admin em uma tela."
+        title="Visão Geral"
         description="Acompanhamento rápido da arrecadação, confirmações e dos presentes com mais movimento. O foco aqui é deixar vocês no controle sem precisar vasculhar o sistema."
       />
 
