@@ -1,6 +1,10 @@
 import { centsToBRL } from "@/src/lib/money";
 import { getAdminOverview } from "@/src/lib/admin-data";
-import { AdminPageHeader, AdminMetricCard } from "@/src/components/sections/admin/admin-ui";
+import {
+  AdminEmptyState,
+  AdminMetricCard,
+  AdminPageHeader,
+} from "@/src/components/sections/admin/admin-ui";
 
 function percentageValue(total: number, part: number) {
   if (!total) {
@@ -86,42 +90,47 @@ export default async function AdminDashboardPage() {
           <div className="admin-panel-header">
             <div>
               <h2>Os favoritos da galera</h2>
-              <p>Os itens abaixo ajudam a entender o ritmo da lista.</p>
+              <p>Mostra apenas os 5 presentes com mais compras confirmadas.</p>
             </div>
           </div>
 
           <div className="admin-progress-list">
-            {data.topGifts.map((gift) => {
-              const sold = gift.purchasedQuantity + gift.reservedQuantity;
-              const progress = percentageValue(gift.totalQuantity, sold);
-              const available =
-                gift.totalQuantity - gift.purchasedQuantity - gift.reservedQuantity;
+            {data.topGifts.length === 0 ? (
+              <AdminEmptyState>Nenhum presente teve compras confirmadas ainda.</AdminEmptyState>
+            ) : (
+              data.topGifts.map((gift) => {
+                const progress = percentageValue(gift.totalQuantity, gift.purchasedQuantity);
+                const available =
+                  gift.totalQuantity - gift.purchasedQuantity - gift.reservedQuantity;
 
-              return (
-                <article key={gift.id} className="admin-progress-item">
-                  <header>
-                    <div>
-                      <h3>{gift.name}</h3>
-                      <div className="admin-progress-meta">
-                        {centsToBRL(gift.priceCents)} por cota
+                return (
+                  <article key={gift.id} className="admin-progress-item">
+                    <header>
+                      <div>
+                        <h3>{gift.name}</h3>
+                        <div className="admin-progress-meta">
+                          {centsToBRL(gift.priceCents)} por cota
+                        </div>
                       </div>
+                      <div className="admin-progress-meta">
+                        {Math.max(0, available)} disponíveis
+                      </div>
+                    </header>
+
+                    <div className="admin-progress-bar">
+                      <span
+                        style={{ width: progress === 0 ? "0%" : `max(${progress}%, 12px)` }}
+                      />
                     </div>
+
                     <div className="admin-progress-meta">
-                      {Math.max(0, available)} disponíveis
+                      {gift.purchasedQuantity} compradas, {gift.reservedQuantity} reservadas,{" "}
+                      {gift.totalQuantity} no total.
                     </div>
-                  </header>
-
-                  <div className="admin-progress-bar">
-                    <span style={{ width: progress === 0 ? "0%" : `max(${progress}%, 12px)` }} />
-                  </div>
-
-                  <div className="admin-progress-meta">
-                    {gift.purchasedQuantity} compradas, {gift.reservedQuantity} reservadas,{" "}
-                    {gift.totalQuantity} no total.
-                  </div>
-                </article>
-              );
-            })}
+                  </article>
+                );
+              })
+            )}
           </div>
         </article>
       </section>

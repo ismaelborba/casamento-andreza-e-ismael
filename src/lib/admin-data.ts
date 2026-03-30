@@ -238,12 +238,15 @@ export async function getAdminOverview() {
 
   const giftRows = await getAdminGifts();
   const topGifts = [...giftRows]
+    .filter((gift) => gift.purchasedQuantity > 0)
     .sort((left, right) => {
-      const leftScore = left.purchasedQuantity + left.reservedQuantity;
-      const rightScore = right.purchasedQuantity + right.reservedQuantity;
-      return rightScore - leftScore;
+      if (right.purchasedQuantity !== left.purchasedQuantity) {
+        return right.purchasedQuantity - left.purchasedQuantity;
+      }
+
+      return right.reservedQuantity - left.reservedQuantity;
     })
-    .slice(0, 6);
+    .slice(0, 5);
 
   const config = await getAsaasSettingsStatus();
   let asaasBalance: Awaited<ReturnType<typeof getAsaasBalance>> | null = null;

@@ -92,18 +92,90 @@ export function AdminShellClient({ userEmail, children }: Props) {
     };
   }, [mobileOpen]);
 
-  return (
-    <div className="admin-shell" data-sidebar-open={mobileOpen ? "true" : "false"}>
-      {mobileOpen ? (
-        <button
-          type="button"
-          className="admin-sidebar-backdrop"
-          aria-label="Fechar menu"
+  function renderNavLinks() {
+    return items.map((item) => {
+      const active =
+        pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
+
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
           onClick={() => setMobileOpen(false)}
-        />
+          className={`admin-nav-link ${active ? "is-active" : ""}`}
+        >
+          <span className="admin-nav-copy">
+            <strong>{item.label}</strong>
+            <span>{item.description}</span>
+          </span>
+          <span aria-hidden="true">+</span>
+        </Link>
+      );
+    });
+  }
+
+  function renderSidebarFooter() {
+    return (
+      <div className="admin-sidebar-footer">
+        <div className="admin-sidebar-session">
+          <span>Sessão ativa</span>
+          <strong>{userEmail}</strong>
+        </div>
+        <AdminLogoutButton />
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-shell">
+      {mobileOpen ? (
+        <>
+          <button
+            type="button"
+            className="admin-sidebar-backdrop"
+            aria-label="Fechar menu"
+            onClick={() => setMobileOpen(false)}
+          />
+
+          <div className="admin-mobile-drawer" id="admin-sidebar" role="dialog" aria-modal="true">
+            <div className="admin-mobile-drawer-head">
+              <Image
+                src="/assets/images/logo-sem-fundo.png"
+                width={52}
+                height={52}
+                className="admin-brand-logo admin-mobile-drawer-logo"
+                alt="Andreza e Ismael"
+              />
+
+              <button
+                type="button"
+                className="admin-mobile-toggle is-open"
+                aria-expanded={mobileOpen}
+                aria-controls="admin-sidebar"
+                aria-label="Fechar menu"
+                onClick={() => setMobileOpen(false)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+            </div>
+
+            <div className="admin-mobile-drawer-copy">
+              <span className="admin-brand-eyebrow">Área privada</span>
+              <strong>{activeItem?.label ?? "Painel"}</strong>
+            </div>
+
+            <nav className="admin-nav admin-mobile-nav" aria-label="Menu administrativo">
+              {renderNavLinks()}
+            </nav>
+
+            {renderSidebarFooter()}
+          </div>
+        </>
       ) : null}
 
-      <aside className="admin-sidebar" id="admin-sidebar">
+      <aside className="admin-sidebar">
         <div className="admin-sidebar-scroll">
           <div className="admin-brand">
             <Image
@@ -118,70 +190,54 @@ export function AdminShellClient({ userEmail, children }: Props) {
               <strong>Painel do casamento</strong>
               <span className="admin-brand-meta">Andreza & Ismael</span>
             </div>
-            <button
-              type="button"
-              className="admin-button-secondary admin-sidebar-close admin-hide-desktop"
-              aria-label="Fechar menu"
-              onClick={() => setMobileOpen(false)}
-            >
-              Fechar
-            </button>
           </div>
 
           <nav className="admin-nav" aria-label="Menu administrativo">
-            {items.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== "/admin" && pathname.startsWith(item.href));
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`admin-nav-link ${active ? "is-active" : ""}`}
-                >
-                  <span className="admin-nav-copy">
-                    <strong>{item.label}</strong>
-                    <span>{item.description}</span>
-                  </span>
-                  <span aria-hidden="true">+</span>
-                </Link>
-              );
-            })}
+            {renderNavLinks()}
           </nav>
 
-          <div className="admin-sidebar-footer">
-            <AdminLogoutButton />
-          </div>
+          {renderSidebarFooter()}
         </div>
       </aside>
 
       <div className="admin-main">
         <div className="admin-topbar">
-          <div className="admin-breadcrumbs">
-            <button
-              type="button"
-              className="admin-button-secondary admin-mobile-toggle"
-              aria-expanded={mobileOpen}
-              aria-controls="admin-sidebar"
-              onClick={() => setMobileOpen((value) => !value)}
-            >
-              {mobileOpen ? "Fechar menu" : "Abrir menu"}
-            </button>
+          <div className="admin-mobile-topbar admin-hide-desktop">
+            <div className="admin-mobile-topbar-row">
+              <Image
+                src="/assets/images/logo-sem-fundo.png"
+                width={76}
+                height={76}
+                className="admin-brand-logo admin-mobile-topbar-logo"
+                alt="Andreza e Ismael"
+              />
+
+              <button
+                type="button"
+                className="admin-mobile-toggle"
+                aria-expanded={mobileOpen}
+                aria-controls="admin-sidebar"
+                aria-label="Abrir menu"
+                onClick={() => setMobileOpen(true)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+            </div>
+          </div>
+
+          <div className="admin-breadcrumbs admin-hide-mobile">
             <span>Admin</span>
             <span>/</span>
             <strong>{activeItem?.label ?? "Painel"}</strong>
           </div>
 
-          <div className="admin-topbar-meta">
+          <div className="admin-topbar-meta admin-hide-mobile">
             <div className="admin-topbar-user">
               <strong>Casamento Andreza & Ismael</strong>
               <span>{userEmail}</span>
             </div>
-            <span className="admin-hide-desktop">
-              <AdminLogoutButton />
-            </span>
           </div>
         </div>
 
