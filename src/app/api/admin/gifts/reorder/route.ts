@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/src/db";
@@ -43,16 +43,26 @@ export async function POST(req: Request) {
   const [movedRow] = nextOrder.splice(currentIndex, 1);
   nextOrder.splice(targetIndex, 0, movedRow);
 
-  await db.transaction(async (tx) => {
-    await Promise.all(
-      nextOrder.map((row, index) =>
-        tx
-          .update(gifts)
-          .set({ displayOrder: index + 1 })
-          .where(eq(gifts.id, row.id)),
-      ),
-    );
-  });
+  const changedRows = nextOrder
+    .map((row, index) => ({ id: row.id, displayOrder: index + 1 }))
+    .filter((row, index) => orderedRows[index]?.id !== row.id);
+
+  if (changedRows.length === 0) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const nextIds = changedRows.map((row) => row.id);
+  const nextDisplayOrder = sql<number>`case ${gifts.id}
+    ${sql.join(
+      changedRows.map((row) => sql`when ${row.id} then ${row.displayOrder}`),
+      sql.raw(" "),
+    )}
+  end`;
+
+  await db
+    .update(gifts)
+    .set({ displayOrder: nextDisplayOrder })
+    .where(inArray(gifts.id, nextIds));
 
   return NextResponse.json({ ok: true });
 }
