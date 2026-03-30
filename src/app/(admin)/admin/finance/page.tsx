@@ -13,6 +13,10 @@ function brl(value: number) {
   }).format(value);
 }
 
+function estimatedNetLabel(method: string, value: number) {
+  return method === "CREDIT_CARD" ? `Líquido estimado ${brl(value)}` : `Líquido ${brl(value)}`;
+}
+
 export default async function AdminFinancePage() {
   const data = await getAdminFinance();
   const balance = data.balance?.availableBalance ?? data.balance?.balance ?? null;
@@ -275,7 +279,66 @@ export default async function AdminFinancePage() {
               </div>
             </div>
 
-            <div className="admin-table-shell">
+            <div className="admin-finance-mobile-list">
+              {data.lastPayments.length ? (
+                data.lastPayments.map((payment) => (
+                  <article key={payment.id} className="admin-finance-payment-card">
+                    <div className="admin-finance-payment-head">
+                      <div>
+                        <span className="admin-order-card-kicker">Pagamento</span>
+                        <strong>{payment.payerName}</strong>
+                        <p>{payment.detailsLabel}</p>
+                      </div>
+
+                      <div className="admin-finance-payment-total">
+                        <span>Valor</span>
+                        <strong>{brl(payment.value)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="admin-finance-payment-grid">
+                      <div className="admin-order-card-field">
+                        <span className="admin-order-card-label">Método</span>
+                        <strong>{payment.methodLabel}</strong>
+                      </div>
+
+                      <div className="admin-order-card-field">
+                        <span className="admin-order-card-label">Status</span>
+                        <span className={statusClassName(payment.status)}>
+                          {payment.statusLabel}
+                        </span>
+                      </div>
+
+                      <div className="admin-order-card-field">
+                        <span className="admin-order-card-label">Pago em</span>
+                        <strong>{payment.dateLabel}</strong>
+                      </div>
+
+                      <div className="admin-order-card-field">
+                        <span className="admin-order-card-label">Liberação Asaas</span>
+                        <strong>{payment.releaseDateLabel}</strong>
+                      </div>
+
+                      <div className="admin-order-card-field admin-finance-payment-full">
+                        <span className="admin-order-card-label">Valores</span>
+                        <strong>{estimatedNetLabel(payment.method, payment.netValue)}</strong>
+                      </div>
+
+                      <div className="admin-order-card-field admin-finance-payment-full">
+                        <span className="admin-order-card-label">Referência</span>
+                        <strong>{payment.externalReference}</strong>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="admin-empty">
+                  Nenhum pagamento recente foi retornado pela API do Asaas.
+                </div>
+              )}
+            </div>
+
+            <div className="admin-table-shell admin-finance-desktop">
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -308,7 +371,7 @@ export default async function AdminFinancePage() {
                         <td>
                           <span className="admin-table-title">{brl(payment.value)}</span>
                           <span className="admin-table-copy">
-                            Líquido estimado {brl(payment.netValue)}
+                            {estimatedNetLabel(payment.method, payment.netValue)}
                           </span>
                         </td>
                         <td>

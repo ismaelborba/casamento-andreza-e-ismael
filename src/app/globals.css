@@ -1694,11 +1694,80 @@ a {
   display: none;
 }
 
+.admin-finance-mobile-list {
+  display: none;
+}
+
 .admin-order-card {
   padding: 20px;
   border-radius: 22px;
   border: 1px solid rgba(5, 6, 6, 0.1);
   background: rgba(255, 255, 255, 0.58);
+}
+
+.admin-finance-payment-card {
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(5, 6, 6, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.admin-finance-payment-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-finance-payment-head strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--admin-ink);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.admin-finance-payment-head p {
+  margin: 6px 0 0;
+  color: var(--admin-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-finance-payment-total {
+  min-width: 108px;
+  text-align: right;
+}
+
+.admin-finance-payment-total span {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-finance-payment-total strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--admin-ink);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.admin-finance-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.admin-finance-payment-full {
+  grid-column: 1 / -1;
+}
+
+.admin-finance-payment-full strong {
+  overflow-wrap: anywhere;
 }
 
 .admin-order-card + .admin-order-card {
@@ -5111,6 +5180,15 @@ a {
 
   .admin-orders-mobile-list {
     display: block;
+  }
+
+  .admin-finance-desktop {
+    display: none;
+  }
+
+  .admin-finance-mobile-list {
+    display: grid;
+    gap: 14px;
   }
 
   .admin-table-shell {
