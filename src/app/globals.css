@@ -1443,9 +1443,25 @@ a {
 .admin-page-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.admin-page-header > div:first-child {
+  flex: 1 1 560px;
+  min-width: 0;
+}
+
+.admin-page-header .admin-actions-inline {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+@media (max-width: 820px) {
+  .admin-page-header .admin-actions-inline {
+    margin-left: 0;
+  }
 }
 
 
@@ -2198,6 +2214,122 @@ a {
   gap: 18px;
 }
 
+.admin-gift-launcher {
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px;
+  border-radius: 26px;
+  border: 1px solid rgba(5, 6, 6, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(214, 209, 204, 0.48), transparent 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(239, 236, 232, 0.78));
+}
+
+.admin-gift-launcher p {
+  margin: 0;
+  color: var(--admin-muted);
+  line-height: 1.7;
+}
+
+.admin-gift-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(5, 6, 6, 0.38);
+  backdrop-filter: blur(10px);
+}
+
+.admin-gift-modal-dialog {
+  width: min(1120px, 100%);
+  max-height: calc(100vh - 56px);
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 113, 105, 0.55) transparent;
+  border-radius: 32px;
+  border: 1px solid rgba(5, 6, 6, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(214, 209, 204, 0.62), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(239, 236, 232, 0.96));
+  box-shadow: 0 26px 70px rgba(5, 6, 6, 0.2);
+}
+
+.admin-gift-modal-dialog::-webkit-scrollbar {
+  width: 10px;
+}
+
+.admin-gift-modal-dialog::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-gift-modal-dialog::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(31, 31, 31, 0.38), rgba(214, 209, 204, 0.8)) padding-box;
+}
+
+.admin-gift-modal-dialog::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(31, 31, 31, 0.52), rgba(214, 209, 204, 0.9)) padding-box;
+}
+
+.admin-gift-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+  padding-right: 56px;
+}
+
+.admin-gift-modal-header h3 {
+  margin: 8px 0 0;
+  color: var(--admin-ink);
+  font-size: clamp(24px, 2vw, 32px);
+  font-family: "Georgia", "Times New Roman", serif;
+}
+
+.admin-gift-modal-header p {
+  margin: 10px 0 0;
+  color: var(--admin-muted);
+  line-height: 1.7;
+}
+
+.admin-gift-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(5, 6, 6, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--admin-accent-strong);
+  box-shadow: 0 10px 24px rgba(5, 6, 6, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.admin-gift-modal-close:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(5, 6, 6, 0.12);
+}
+
+.admin-gift-modal-close:disabled {
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 .admin-gift-form-main {
   display: grid;
   gap: 18px;
@@ -2815,6 +2947,15 @@ a {
 .admin-gift-drag-handle span {
   font-size: 12px;
   font-weight: 600;
+}
+
+.admin-gift-mobile-reorder {
+  display: none;
+  gap: 8px;
+}
+
+.admin-gift-mobile-reorder .admin-button-secondary {
+  flex: 1 1 0;
 }
 
 .admin-gift-row-actions .admin-button-secondary {
@@ -5469,6 +5610,29 @@ a {
     padding: 16px;
   }
 
+  .admin-gift-launcher,
+  .admin-gift-modal-dialog {
+    padding: 18px;
+  }
+
+  .admin-gift-modal {
+    padding: 14px;
+  }
+
+  .admin-gift-modal-header {
+    display: grid;
+    padding-right: 0;
+    align-items: start;
+  }
+
+  .admin-gift-modal-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 36px;
+    height: 36px;
+  }
+
   .admin-gift-form-section-head {
     grid-template-columns: 1fr;
     display: grid;
@@ -5527,6 +5691,16 @@ a {
 
   .admin-gift-drag-handle {
     justify-content: center;
+  }
+}
+
+@media (pointer: coarse), (max-width: 820px) {
+  .admin-gift-drag-handle {
+    display: none;
+  }
+
+  .admin-gift-mobile-reorder {
+    display: flex;
   }
 }
 
@@ -5786,7 +5960,7 @@ a {
 }
 
 .admin-app .admin-page-header {
-  display: grid !important;
+  display: flex !important;
   gap: 10px !important;
 }
 

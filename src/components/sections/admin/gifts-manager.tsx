@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical, ImagePlus, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, ImagePlus, LoaderCircle, Trash2, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { centsToBRL } from "@/src/lib/money";
 import {
@@ -94,6 +94,7 @@ function reorderGiftRows(
 export function AdminGiftsManager({ initialRows }: Props) {
   const [rows, setRows] = useState(initialRows);
   const [form, setForm] = useState(emptyForm);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [movingId, setMovingId] = useState<string | null>(null);
@@ -125,6 +126,51 @@ export function AdminGiftsManager({ initialRows }: Props) {
     setRows(initialRows);
   }, [initialRows]);
 
+  useEffect(() => {
+    if (!isFormOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFormOpen]);
+
+  useEffect(() => {
+    if (!isFormOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !saving && !uploadingImage) {
+        setIsFormOpen(false);
+        setForm(emptyForm);
+        setFeedback(null);
+        setError(null);
+        setDragActive(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFormOpen, saving, uploadingImage]);
+
+  useEffect(() => {
+    function handleCreateRequest() {
+      setForm(emptyForm);
+      setFeedback(null);
+      setError(null);
+      setDragActive(false);
+      setIsFormOpen(true);
+    }
+
+    window.addEventListener("admin:gifts-create-open", handleCreateRequest);
+    return () => window.removeEventListener("admin:gifts-create-open", handleCreateRequest);
+  }, []);
+
   const summary = useMemo(() => {
     return rows.reduce(
       (accumulator, row) => {
@@ -149,6 +195,7 @@ export function AdminGiftsManager({ initialRows }: Props) {
       totalQuantity: row.totalQuantity,
       active: row.active,
     });
+    setIsFormOpen(true);
   }
 
   function resetForm() {
@@ -156,6 +203,15 @@ export function AdminGiftsManager({ initialRows }: Props) {
     setFeedback(null);
     setError(null);
     setDragActive(false);
+  }
+
+  function closeFormModal() {
+    if (saving || uploadingImage) {
+      return;
+    }
+
+    setIsFormOpen(false);
+    resetForm();
   }
 
   async function uploadImage(file: File) {
@@ -229,6 +285,7 @@ export function AdminGiftsManager({ initialRows }: Props) {
 
       setFeedback(editing ? "Presente atualizado com sucesso." : "Presente criado com sucesso.");
       setForm(emptyForm);
+      setIsFormOpen(false);
       await refresh();
     } catch (cause) {
       const message =
@@ -336,29 +393,40 @@ export function AdminGiftsManager({ initialRows }: Props) {
   }
 
   return (
-    <div className="admin-gifts-layout">
-      <section className="admin-panel">
-        <div className="admin-panel-header">
-          <div>
-            <h2>{editing ? "Editar presente" : "Novo presente"}</h2>
-            <p>
-              Cadastre a lista que aparecerá em <code>/gifts</code>, com valor por
-              cota, disponibilidade e controle de exibição.
-            </p>
-            <p style={{ margin: "8px 0 0", color: "var(--admin-muted)" }}>
-              A ordem abaixo define a vitrine do site. VocÃª pode mover qualquer item para a
-              posiÃ§Ã£o que quiser.
-            </p>
-          </div>
+    <>
+      {isFormOpen ? (
+          <div
+            className="admin-gift-modal"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                closeFormModal();
+              }
+            }}
+          >
+            <div className="admin-gift-modal-dialog" role="dialog" aria-modal="true">
+              <div className="admin-gift-modal-header">
+                <div>
+                  <span className="admin-card-label">
+                    {editing ? "Editar presente" : "Novo presente"}
+                  </span>
+                  <h3>{editing ? "Atualize os detalhes do presente" : "Cadastrar novo presente"}</h3>
+                  <p>
+                    Preencha os dados, revise a vitrine e salve quando estiver tudo certo.
+                  </p>
+                </div>
 
-          {editing ? (
-            <button className="admin-button-secondary" type="button" onClick={resetForm}>
-              Cancelar edição
-            </button>
-          ) : null}
-        </div>
+                <button
+                  className="admin-gift-modal-close"
+                  type="button"
+                  onClick={closeFormModal}
+                  disabled={saving || uploadingImage}
+                  aria-label="Fechar modal"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-        <div className="admin-gift-form-shell">
+              <div className="admin-gift-form-shell">
           <div className="admin-gift-form-main">
             <div className="admin-gift-form-section">
               <div className="admin-gift-form-section-head">
@@ -661,9 +729,10 @@ export function AdminGiftsManager({ initialRows }: Props) {
               {saving ? "Salvando..." : editing ? "Salvar alteracoes" : "Cadastrar presente"}
             </button>
           </div>
-        </div>
-      </section>
-
+              </div>
+            </div>
+          </div>
+      ) : null}
       <section className="admin-panel">
         <div className="admin-toolbar">
           <div>
@@ -818,6 +887,29 @@ export function AdminGiftsManager({ initialRows }: Props) {
                     <span>{movingId === row.id ? "Movendo..." : "Arrastar na lista"}</span>
                   </div>
 
+                  <div className="admin-gift-mobile-reorder">
+                    <button
+                      type="button"
+                      className="admin-button-secondary"
+                      onClick={() => handleMove(row.id, Math.max(1, index), row.name, rows)}
+                      disabled={index === 0 || movingId === row.id}
+                    >
+                      <ArrowUp size={16} />
+                      Subir
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-button-secondary"
+                      onClick={() =>
+                        handleMove(row.id, Math.min(rows.length, index + 2), row.name, rows)
+                      }
+                      disabled={index === rows.length - 1 || movingId === row.id}
+                    >
+                      <ArrowDown size={16} />
+                      Descer
+                    </button>
+                  </div>
+
                   <div style={{ display: "none" }}>
                     <span className="admin-inline-note">Mover para a posiÃ§Ã£o</span>
 
@@ -843,6 +935,6 @@ export function AdminGiftsManager({ initialRows }: Props) {
           </div>
         )}
       </section>
-    </div>
+    </>
   );
 }
