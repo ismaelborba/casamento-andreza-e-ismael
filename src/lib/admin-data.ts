@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/src/db";
 import { buyers, gifts, orderItems, orders, payments, rsvps } from "@/src/db/schema";
 import { getAsaasSettingsStatus } from "@/src/lib/asaas-config";
@@ -210,11 +210,15 @@ function extractOrderIdFromExternalReference(value?: string | null) {
 }
 
 export async function getPublicGifts() {
-  return db.select().from(gifts).where(eq(gifts.active, true)).orderBy(desc(gifts.createdAt));
+  return db
+    .select()
+    .from(gifts)
+    .where(eq(gifts.active, true))
+    .orderBy(asc(gifts.displayOrder), desc(gifts.createdAt));
 }
 
 export async function getAdminGifts() {
-  return db.select().from(gifts).orderBy(desc(gifts.createdAt));
+  return db.select().from(gifts).orderBy(asc(gifts.displayOrder), desc(gifts.createdAt));
 }
 
 export async function getAdminOverview() {

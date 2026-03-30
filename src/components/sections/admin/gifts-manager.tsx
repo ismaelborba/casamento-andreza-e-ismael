@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
+import { GripVertical, ImagePlus, LoaderCircle, Trash2, UploadCloud } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { centsToBRL } from "@/src/lib/money";
 import {
@@ -8,9 +8,14 @@ import {
   formatStatusLabel,
   statusClassName,
 } from "@/src/components/sections/admin/admin-ui";
+import {
+  showAdminGiftReorderedToast,
+  showAdminGiftReorderErrorToast,
+} from "@/src/components/sections/admin/admin-gifts-toast";
 
 type GiftRow = {
   id: string;
+  displayOrder: number;
   name: string;
   description: string | null;
   imageUrl: string | null;
@@ -24,6 +29,8 @@ type GiftRow = {
 type Props = {
   initialRows: GiftRow[];
 };
+
+type DropPlacement = "before" | "after";
 
 const emptyForm = {
   id: "",
@@ -55,11 +62,45 @@ function normalizeMoneyInput(value: string) {
   return digits ? Number(digits) : 0;
 }
 
+function reorderGiftRows(
+  rows: GiftRow[],
+  movingId: string,
+  targetId: string,
+  placement: DropPlacement,
+) {
+  if (movingId === targetId) {
+    return rows;
+  }
+
+  const movingRow = rows.find((row) => row.id === movingId);
+
+  if (!movingRow) {
+    return rows;
+  }
+
+  const remainingRows = rows.filter((row) => row.id !== movingId);
+  const targetIndex = remainingRows.findIndex((row) => row.id === targetId);
+
+  if (targetIndex === -1) {
+    return rows;
+  }
+
+  const insertIndex = placement === "after" ? targetIndex + 1 : targetIndex;
+  const nextRows = [...remainingRows];
+  nextRows.splice(insertIndex, 0, movingRow);
+  return nextRows;
+}
+
 export function AdminGiftsManager({ initialRows }: Props) {
   const [rows, setRows] = useState(initialRows);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; placement: DropPlacement } | null>(
+    null,
+  );
   const [uploadingImage, setUploadingImage] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -232,6 +273,68 @@ export function AdminGiftsManager({ initialRows }: Props) {
     }
   }
 
+  async function handleMove(
+    id: string,
+    nextPosition: number,
+    giftName: string,
+    previousRows?: GiftRow[],
+  ) {
+    setMovingId(id);
+    setFeedback(null);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/admin/gifts/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, position: nextPosition }),
+      });
+
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(json?.error?.formErrors?.[0] ?? json?.error ?? "Nao foi possivel reordenar.");
+      }
+
+      setFeedback("Ordem da lista atualizada.");
+      showAdminGiftReorderedToast({ giftName, position: nextPosition });
+      await refresh();
+    } catch (cause) {
+      if (previousRows) {
+        setRows(previousRows);
+      }
+
+      const message =
+        cause instanceof Error ? cause.message : "Nao foi possivel reordenar os presentes.";
+      setError(message);
+      showAdminGiftReorderErrorToast(message);
+    } finally {
+      setMovingId(null);
+    }
+  }
+
+  async function handleDrop(targetId: string, placement: DropPlacement) {
+    if (!draggingId || draggingId === targetId || movingId) {
+      setDropTarget(null);
+      return;
+    }
+
+    const previousRows = rows;
+    const movingRow = rows.find((row) => row.id === draggingId);
+    const nextRows = reorderGiftRows(rows, draggingId, targetId, placement);
+    const nextPosition = nextRows.findIndex((row) => row.id === draggingId) + 1;
+
+    if (nextPosition <= 0) {
+      setDropTarget(null);
+      return;
+    }
+
+    setRows(nextRows);
+    setDropTarget(null);
+    setDraggingId(null);
+    await handleMove(draggingId, nextPosition, movingRow?.name ?? "Presente", previousRows);
+  }
+
   return (
     <div className="admin-gifts-layout">
       <section className="admin-panel">
@@ -241,6 +344,10 @@ export function AdminGiftsManager({ initialRows }: Props) {
             <p>
               Cadastre a lista que aparecerá em <code>/gifts</code>, com valor por
               cota, disponibilidade e controle de exibição.
+            </p>
+            <p style={{ margin: "8px 0 0", color: "var(--admin-muted)" }}>
+              A ordem abaixo define a vitrine do site. VocÃª pode mover qualquer item para a
+              posiÃ§Ã£o que quiser.
             </p>
           </div>
 
@@ -565,6 +672,9 @@ export function AdminGiftsManager({ initialRows }: Props) {
               {rows.length} itens cadastrados, {summary.active} ativos e {summary.available} cotas
               ainda disponíveis.
             </p>
+            <p style={{ margin: "8px 0 0", color: "var(--admin-muted)" }}>
+              Arraste os cards para cima ou para baixo para definir a ordem exata da vitrine.
+            </p>
           </div>
 
           <div className="admin-actions-inline">
@@ -586,8 +696,34 @@ export function AdminGiftsManager({ initialRows }: Props) {
           </AdminEmptyState>
         ) : (
           <div className="admin-gifts-list">
-            {rows.map((row) => (
-              <article key={row.id} className="admin-gift-row">
+            {rows.map((row, index) => (
+              <article
+                key={row.id}
+                className={`admin-gift-row ${draggingId === row.id ? "is-dragging" : ""} ${dropTarget?.id === row.id ? `is-drop-${dropTarget.placement}` : ""}`}
+                onDragOver={(event) => {
+                  if (!draggingId || draggingId === row.id || movingId) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  const placement =
+                    event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+
+                  setDropTarget((current) =>
+                    current?.id === row.id && current.placement === placement
+                      ? current
+                      : { id: row.id, placement },
+                  );
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void handleDrop(
+                    row.id,
+                    dropTarget?.id === row.id ? dropTarget.placement : "after",
+                  );
+                }}
+              >
                 <div className="admin-gift-row-main">
                   <div className="admin-gift-row-head">
                     <div className="admin-gift-row-hero">
@@ -601,6 +737,9 @@ export function AdminGiftsManager({ initialRows }: Props) {
                       </div>
 
                       <div>
+                        <div className="admin-gift-row-order">
+                          <span>PosiÃ§Ã£o {index + 1}</span>
+                        </div>
                         <h3 className="admin-gift-row-title">{row.name}</h3>
                         <p className="admin-gift-row-description">
                           {row.description || "Sem descrição cadastrada."}
@@ -658,6 +797,32 @@ export function AdminGiftsManager({ initialRows }: Props) {
                 </div>
 
                 <div className="admin-gift-row-actions">
+                  <div
+                    className="admin-gift-drag-handle"
+                    draggable={movingId !== row.id}
+                    onDragStart={(event) => {
+                      setDraggingId(row.id);
+                      setDropTarget(null);
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", row.id);
+                    }}
+                    onDragEnd={() => {
+                      setDraggingId(null);
+                      setDropTarget(null);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Arrastar ${row.name}`}
+                  >
+                    <GripVertical size={16} />
+                    <span>{movingId === row.id ? "Movendo..." : "Arrastar na lista"}</span>
+                  </div>
+
+                  <div style={{ display: "none" }}>
+                    <span className="admin-inline-note">Mover para a posiÃ§Ã£o</span>
+
+                  </div>
+
                   <button
                     type="button"
                     className="admin-button-secondary"

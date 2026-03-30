@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/src/db";
 import { gifts } from "@/src/db/schema";
-import { desc, eq } from "drizzle-orm";
 
 const imageUrlSchema = z
   .string()
@@ -22,7 +22,10 @@ const giftSchema = z.object({
 });
 
 export async function GET() {
-  const rows = await db.select().from(gifts).orderBy(desc(gifts.createdAt));
+  const rows = await db
+    .select()
+    .from(gifts)
+    .orderBy(asc(gifts.displayOrder), desc(gifts.createdAt));
   return NextResponse.json({ rows });
 }
 
@@ -30,10 +33,17 @@ export async function POST(req: Request) {
   const parsed = giftSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
+  const [summary] = await db
+    .select({
+      maxDisplayOrder: sql<number>`coalesce(max(${gifts.displayOrder}), 0)`.mapWith(Number),
+    })
+    .from(gifts);
+
   const row = (
     await db
       .insert(gifts)
       .values({
+        displayOrder: (summary?.maxDisplayOrder ?? 0) + 1,
         name: parsed.data.name,
         description: parsed.data.description ?? null,
         imageUrl: parsed.data.imageUrl || null,

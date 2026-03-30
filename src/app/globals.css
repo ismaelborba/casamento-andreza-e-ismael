@@ -2622,6 +2622,10 @@ a {
   gap: 16px;
 }
 
+.admin-gifts-layout .admin-panel:first-child .admin-panel-header > div > p + p {
+  display: none;
+}
+
 .admin-gift-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 140px;
@@ -2630,6 +2634,18 @@ a {
   border-radius: 22px;
   border: 1px solid rgba(5, 6, 6, 0.12);
   background: rgba(255, 255, 255, 0.56);
+}
+
+.admin-gift-row.is-dragging {
+  opacity: 0.58;
+}
+
+.admin-gift-row.is-drop-before {
+  box-shadow: inset 0 3px 0 rgba(5, 6, 6, 0.72);
+}
+
+.admin-gift-row.is-drop-after {
+  box-shadow: inset 0 -3px 0 rgba(5, 6, 6, 0.72);
 }
 
 .admin-gift-row-main {
@@ -2678,6 +2694,24 @@ a {
   font-size: 18px;
   line-height: 1.08;
   font-family: "Georgia", "Times New Roman", serif;
+}
+
+.admin-gift-row-order {
+  display: none;
+}
+
+.admin-gift-row-order span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(31, 31, 31, 0.08);
+  color: var(--admin-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .admin-gift-row-description {
@@ -2756,6 +2790,31 @@ a {
   display: grid;
   align-content: start;
   gap: 10px;
+}
+
+.admin-gift-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px dashed rgba(5, 6, 6, 0.18);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--admin-ink);
+  cursor: grab;
+  user-select: none;
+}
+
+.admin-gift-drag-handle:active {
+  cursor: grabbing;
+}
+
+.admin-gift-drag-handle span {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .admin-gift-row-actions .admin-button-secondary {
@@ -5464,6 +5523,10 @@ a {
   .admin-gift-row-side,
   .admin-gift-row-actions {
     justify-items: stretch;
+  }
+
+  .admin-gift-drag-handle {
+    justify-content: center;
   }
 }
 

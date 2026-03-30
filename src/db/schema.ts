@@ -24,6 +24,7 @@ export const asaasEnvironmentEnum = pgEnum("asaas_environment", ["sandbox", "pro
 
 export const gifts = pgTable("gifts", {
   id: uuid("id").primaryKey().defaultRandom(),
+  displayOrder: integer("display_order").notNull().default(0),
   name: text("name").notNull(),
   description: text("description"),
   imageUrl: text("image_url"),
