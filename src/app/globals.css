@@ -1438,7 +1438,8 @@ a {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--gift-accent), #D6D1CC);
+  background: #050606;
+  transition: width 0.2s ease;
 }
 
 .admin-table-shell {

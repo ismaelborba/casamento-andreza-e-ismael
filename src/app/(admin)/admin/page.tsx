@@ -85,7 +85,7 @@ export default async function AdminDashboardPage() {
         <article className="admin-panel">
           <div className="admin-panel-header">
             <div>
-              <h2>Presentes com mais movimento</h2>
+              <h2>Os favoritos da galera</h2>
               <p>Os itens abaixo ajudam a entender o ritmo da lista.</p>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default async function AdminDashboardPage() {
                   </header>
 
                   <div className="admin-progress-bar">
-                    <span style={{ width: `${progress}%` }} />
+                    <span style={{ width: progress === 0 ? "0%" : `max(${progress}%, 12px)` }} />
                   </div>
 
                   <div className="admin-progress-meta">

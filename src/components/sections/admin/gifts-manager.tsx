@@ -622,7 +622,14 @@ export function AdminGiftsManager({ initialRows }: Props) {
                       <strong>{progressValue(row)}%</strong>
                     </div>
                     <div className="admin-progress-bar">
-                      <span style={{ width: `${progressValue(row)}%` }} />
+                      <span
+                        style={{
+                          width:
+                            progressValue(row) === 0
+                              ? "0%"
+                              : `max(${progressValue(row)}%, 12px)`,
+                        }}
+                      />
                     </div>
                   </div>
 
