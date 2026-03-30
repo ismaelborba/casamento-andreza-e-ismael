@@ -1438,7 +1438,7 @@ a {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #050606;
+  background: linear-gradient(90deg, #050606 0%, #1f1f1f 42%, #d6d1cc 100%);
   transition: width 0.2s ease;
 }
 
