@@ -306,6 +306,15 @@ export function AdminGiftsManager({ initialRows }: Props) {
   const previewImage = form.imageUrl || null;
   const formReady = Boolean(form.name.trim() && form.priceCents > 0 && form.totalQuantity > 0);
   const draggingRow = draggingId ? rows.find((row) => row.id === draggingId) ?? null : null;
+  const draggingRowIndex = draggingId ? rows.findIndex((row) => row.id === draggingId) : -1;
+
+  function isDropIndexDisabled(dropIndex: number) {
+    if (draggingRowIndex === -1) {
+      return false;
+    }
+
+    return dropIndex === draggingRowIndex || dropIndex === draggingRowIndex + 1;
+  }
 
   async function handleSubmit() {
     setSaving(true);
@@ -838,9 +847,9 @@ export function AdminGiftsManager({ initialRows }: Props) {
             {rows.map((row, index) => (
               <Fragment key={row.id}>
                 <div
-                  className={`admin-gift-drop-slot ${draggingId ? "is-visible" : ""} ${dropTargetIndex === index ? "is-active" : ""}`}
+                  className={`admin-gift-drop-slot ${draggingId && !isDropIndexDisabled(index) ? "is-visible" : ""} ${dropTargetIndex === index ? "is-active" : ""}`}
                   onDragOver={(event) => {
-                    if (!draggingId || movingId) {
+                    if (!draggingId || movingId || isDropIndexDisabled(index)) {
                       return;
                     }
 
@@ -849,6 +858,10 @@ export function AdminGiftsManager({ initialRows }: Props) {
                     setDropTargetIndex((current) => (current === index ? current : index));
                   }}
                   onDrop={(event) => {
+                    if (isDropIndexDisabled(index)) {
+                      return;
+                    }
+
                     event.preventDefault();
                     void handleDropAtIndex(index);
                   }}
@@ -1023,9 +1036,9 @@ export function AdminGiftsManager({ initialRows }: Props) {
             ))}
 
             <div
-              className={`admin-gift-drop-slot ${draggingId ? "is-visible" : ""} ${dropTargetIndex === rows.length ? "is-active" : ""}`}
+              className={`admin-gift-drop-slot ${draggingId && !isDropIndexDisabled(rows.length) ? "is-visible" : ""} ${dropTargetIndex === rows.length ? "is-active" : ""}`}
               onDragOver={(event) => {
-                if (!draggingId || movingId) {
+                if (!draggingId || movingId || isDropIndexDisabled(rows.length)) {
                   return;
                 }
 
@@ -1034,6 +1047,10 @@ export function AdminGiftsManager({ initialRows }: Props) {
                 setDropTargetIndex((current) => (current === rows.length ? current : rows.length));
               }}
               onDrop={(event) => {
+                if (isDropIndexDisabled(rows.length)) {
+                  return;
+                }
+
                 event.preventDefault();
                 void handleDropAtIndex(rows.length);
               }}
