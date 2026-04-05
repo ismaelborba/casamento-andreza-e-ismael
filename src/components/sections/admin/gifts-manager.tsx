@@ -1,7 +1,18 @@
 "use client";
 
-import { ArrowDown, ArrowUp, GripVertical, ImagePlus, LoaderCircle, Trash2, UploadCloud, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  GripVertical,
+  ImagePlus,
+  LoaderCircle,
+  MoveVertical,
+  Sparkles,
+  Trash2,
+  UploadCloud,
+  X,
+} from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { centsToBRL } from "@/src/lib/money";
 import {
   AdminEmptyState,
@@ -29,8 +40,6 @@ type GiftRow = {
 type Props = {
   initialRows: GiftRow[];
 };
-
-type DropPlacement = "before" | "after";
 
 const emptyForm = {
   id: "",
@@ -62,35 +71,6 @@ function normalizeMoneyInput(value: string) {
   return digits ? Number(digits) : 0;
 }
 
-function reorderGiftRows(
-  rows: GiftRow[],
-  movingId: string,
-  targetId: string,
-  placement: DropPlacement,
-) {
-  if (movingId === targetId) {
-    return rows;
-  }
-
-  const movingRow = rows.find((row) => row.id === movingId);
-
-  if (!movingRow) {
-    return rows;
-  }
-
-  const remainingRows = rows.filter((row) => row.id !== movingId);
-  const targetIndex = remainingRows.findIndex((row) => row.id === targetId);
-
-  if (targetIndex === -1) {
-    return rows;
-  }
-
-  const insertIndex = placement === "after" ? targetIndex + 1 : targetIndex;
-  const nextRows = [...remainingRows];
-  nextRows.splice(insertIndex, 0, movingRow);
-  return nextRows;
-}
-
 export function AdminGiftsManager({ initialRows }: Props) {
   const [rows, setRows] = useState(initialRows);
   const [form, setForm] = useState(emptyForm);
@@ -99,14 +79,15 @@ export function AdminGiftsManager({ initialRows }: Props) {
   const [saving, setSaving] = useState(false);
   const [movingId, setMovingId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ id: string; placement: DropPlacement } | null>(
-    null,
-  );
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dragStartFrameRef = useRef<number | null>(null);
+  const autoScrollFrameRef = useRef<number | null>(null);
+  const dragPointerYRef = useRef<number | null>(null);
 
   const editing = Boolean(form.id);
 
@@ -125,6 +106,74 @@ export function AdminGiftsManager({ initialRows }: Props) {
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
+
+  useEffect(() => {
+    return () => {
+      if (dragStartFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragStartFrameRef.current);
+      }
+
+      if (autoScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(autoScrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draggingId) {
+      dragPointerYRef.current = null;
+
+      if (autoScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(autoScrollFrameRef.current);
+        autoScrollFrameRef.current = null;
+      }
+
+      return;
+    }
+
+    const edgeThreshold = 140;
+    const maxScrollStep = 18;
+
+    function handleWindowDragOver(event: DragEvent) {
+      dragPointerYRef.current = event.clientY;
+    }
+
+    function tick() {
+      const pointerY = dragPointerYRef.current;
+
+      if (typeof pointerY === "number") {
+        const viewportHeight = window.innerHeight;
+        let nextScrollTop = 0;
+
+        if (pointerY < edgeThreshold) {
+          nextScrollTop = -Math.ceil(((edgeThreshold - pointerY) / edgeThreshold) * maxScrollStep);
+        } else if (pointerY > viewportHeight - edgeThreshold) {
+          nextScrollTop = Math.ceil(
+            ((pointerY - (viewportHeight - edgeThreshold)) / edgeThreshold) * maxScrollStep,
+          );
+        }
+
+        if (nextScrollTop !== 0) {
+          window.scrollBy({ top: nextScrollTop, behavior: "auto" });
+        }
+      }
+
+      autoScrollFrameRef.current = window.requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("dragover", handleWindowDragOver);
+    autoScrollFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener("dragover", handleWindowDragOver);
+      dragPointerYRef.current = null;
+
+      if (autoScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(autoScrollFrameRef.current);
+        autoScrollFrameRef.current = null;
+      }
+    };
+  }, [draggingId]);
 
   useEffect(() => {
     if (!isFormOpen) {
@@ -256,6 +305,7 @@ export function AdminGiftsManager({ initialRows }: Props) {
 
   const previewImage = form.imageUrl || null;
   const formReady = Boolean(form.name.trim() && form.priceCents > 0 && form.totalQuantity > 0);
+  const draggingRow = draggingId ? rows.find((row) => row.id === draggingId) ?? null : null;
 
   async function handleSubmit() {
     setSaving(true);
@@ -370,26 +420,39 @@ export function AdminGiftsManager({ initialRows }: Props) {
     }
   }
 
-  async function handleDrop(targetId: string, placement: DropPlacement) {
-    if (!draggingId || draggingId === targetId || movingId) {
-      setDropTarget(null);
+  async function handleDropAtIndex(dropIndex: number) {
+    if (!draggingId || movingId) {
+      setDropTargetIndex(null);
       return;
     }
 
     const previousRows = rows;
     const movingRow = rows.find((row) => row.id === draggingId);
-    const nextRows = reorderGiftRows(rows, draggingId, targetId, placement);
-    const nextPosition = nextRows.findIndex((row) => row.id === draggingId) + 1;
+    const currentIndex = rows.findIndex((row) => row.id === draggingId);
 
-    if (nextPosition <= 0) {
-      setDropTarget(null);
+    if (!movingRow || currentIndex === -1) {
+      setDropTargetIndex(null);
+      return;
+    }
+
+    const remainingRows = rows.filter((row) => row.id !== draggingId);
+    const insertIndex =
+      dropIndex > currentIndex ? Math.max(0, dropIndex - 1) : Math.max(0, dropIndex);
+    const boundedIndex = Math.min(remainingRows.length, insertIndex);
+    const nextRows = [...remainingRows];
+    nextRows.splice(boundedIndex, 0, movingRow);
+
+    const orderChanged = nextRows.some((row, index) => row.id !== rows[index]?.id);
+
+    setDropTargetIndex(null);
+    setDraggingId(null);
+
+    if (!orderChanged) {
       return;
     }
 
     setRows(nextRows);
-    setDropTarget(null);
-    setDraggingId(null);
-    await handleMove(draggingId, nextPosition, movingRow?.name ?? "Presente", previousRows);
+    await handleMove(draggingId, boundedIndex + 1, movingRow.name, previousRows);
   }
 
   return (
@@ -758,6 +821,13 @@ export function AdminGiftsManager({ initialRows }: Props) {
           </div>
         </div>
 
+        {draggingId ? (
+          <div className="admin-gift-drag-assist" aria-live="polite">
+            <MoveVertical size={16} />
+            <span>Leve o cursor para as bordas da tela para rolar automaticamente.</span>
+          </div>
+        ) : null}
+
         {rows.length === 0 ? (
           <AdminEmptyState>
             Ainda não existem presentes cadastrados. O primeiro item que vocês
@@ -766,33 +836,43 @@ export function AdminGiftsManager({ initialRows }: Props) {
         ) : (
           <div className="admin-gifts-list">
             {rows.map((row, index) => (
-              <article
-                key={row.id}
-                className={`admin-gift-row ${draggingId === row.id ? "is-dragging" : ""} ${dropTarget?.id === row.id ? `is-drop-${dropTarget.placement}` : ""}`}
-                onDragOver={(event) => {
-                  if (!draggingId || draggingId === row.id || movingId) {
-                    return;
-                  }
+              <Fragment key={row.id}>
+                <div
+                  className={`admin-gift-drop-slot ${draggingId ? "is-visible" : ""} ${dropTargetIndex === index ? "is-active" : ""}`}
+                  onDragOver={(event) => {
+                    if (!draggingId || movingId) {
+                      return;
+                    }
 
-                  event.preventDefault();
-                  const bounds = event.currentTarget.getBoundingClientRect();
-                  const placement =
-                    event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setDropTargetIndex((current) => (current === index ? current : index));
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void handleDropAtIndex(index);
+                  }}
+                >
+                  <div className="admin-gift-drop-slot-icon">
+                    {dropTargetIndex === index ? <Sparkles size={18} /> : <MoveVertical size={18} />}
+                  </div>
+                  <div className="admin-gift-drop-slot-copy">
+                    <strong>
+                      {dropTargetIndex === index
+                        ? `Solte para posicionar`
+                        : `Mover para a posição`}
+                    </strong>
+                    <span>
+                      {draggingRow
+                        ? `${draggingRow.name} vai ocupar este espaço na vitrine.`
+                        : "Arraste um presente e solte aqui para reorganizar a sequência."}
+                    </span>
+                  </div>
+                </div>
 
-                  setDropTarget((current) =>
-                    current?.id === row.id && current.placement === placement
-                      ? current
-                      : { id: row.id, placement },
-                  );
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  void handleDrop(
-                    row.id,
-                    dropTarget?.id === row.id ? dropTarget.placement : "after",
-                  );
-                }}
-              >
+                <article
+                  className={`admin-gift-row ${draggingId === row.id ? "is-dragging" : ""}`}
+                >
                 <div className="admin-gift-row-main">
                   <div className="admin-gift-row-head">
                     <div className="admin-gift-row-hero">
@@ -870,14 +950,22 @@ export function AdminGiftsManager({ initialRows }: Props) {
                     className="admin-gift-drag-handle"
                     draggable={movingId !== row.id}
                     onDragStart={(event) => {
-                      setDraggingId(row.id);
-                      setDropTarget(null);
                       event.dataTransfer.effectAllowed = "move";
                       event.dataTransfer.setData("text/plain", row.id);
+                      dragStartFrameRef.current = window.requestAnimationFrame(() => {
+                        setDraggingId(row.id);
+                        setDropTargetIndex(null);
+                        dragStartFrameRef.current = null;
+                      });
                     }}
                     onDragEnd={() => {
+                      if (dragStartFrameRef.current !== null) {
+                        window.cancelAnimationFrame(dragStartFrameRef.current);
+                        dragStartFrameRef.current = null;
+                      }
+
                       setDraggingId(null);
-                      setDropTarget(null);
+                      setDropTargetIndex(null);
                     }}
                     role="button"
                     tabIndex={0}
@@ -930,8 +1018,42 @@ export function AdminGiftsManager({ initialRows }: Props) {
                     Remover
                   </button>
                 </div>
-              </article>
+                </article>
+              </Fragment>
             ))}
+
+            <div
+              className={`admin-gift-drop-slot ${draggingId ? "is-visible" : ""} ${dropTargetIndex === rows.length ? "is-active" : ""}`}
+              onDragOver={(event) => {
+                if (!draggingId || movingId) {
+                  return;
+                }
+
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDropTargetIndex((current) => (current === rows.length ? current : rows.length));
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                void handleDropAtIndex(rows.length);
+              }}
+            >
+              <div className="admin-gift-drop-slot-icon">
+                {dropTargetIndex === rows.length ? <Sparkles size={18} /> : <MoveVertical size={18} />}
+              </div>
+              <div className="admin-gift-drop-slot-copy">
+                <strong>
+                  {dropTargetIndex === rows.length
+                    ? "Solte para enviar ao final da lista"
+                    : "Mover para o final da vitrine"}
+                </strong>
+                <span>
+                  {draggingRow
+                    ? `${draggingRow.name} será exibido como o último item.`
+                    : "Use esta área se quiser deixar o presente no fim da sequência."}
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </section>
